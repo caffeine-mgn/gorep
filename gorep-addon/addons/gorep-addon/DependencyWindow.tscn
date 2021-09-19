@@ -1,0 +1,69 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://addons/gorep-addon/DependencyWindow.gd" type="Script" id=1]
+
+[node name="DependencyWindow2" type="WindowDialog"]
+margin_right = 464.0
+margin_bottom = 72.0
+popup_exclusive = true
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ArtifactName" type="TextEdit" parent="."]
+margin_left = 8.0
+margin_top = 8.3371
+margin_right = 273.0
+margin_bottom = 31.3371
+text = "godot-plugin-refresher"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ArtifactVersion" type="TextEdit" parent="."]
+margin_left = 280.0
+margin_top = 8.0
+margin_right = 368.0
+margin_bottom = 31.0
+text = "1.0"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ArtifactType" type="OptionButton" parent="."]
+margin_left = 376.0
+margin_top = 8.0
+margin_right = 456.0
+margin_bottom = 31.0
+text = "External"
+items = [ "External", null, false, 0, null, "Internal", null, false, 1, null ]
+selected = 0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Buttons" type="HBoxContainer" parent="."]
+margin_left = 8.0
+margin_top = 48.0
+margin_right = 456.0
+margin_bottom = 68.0
+alignment = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="OkBtn" type="Button" parent="Buttons"]
+margin_left = 180.0
+margin_right = 210.0
+margin_bottom = 20.0
+text = "Ok"
+
+[node name="CancelBtn" type="Button" parent="Buttons"]
+margin_left = 214.0
+margin_right = 268.0
+margin_bottom = 20.0
+text = "Cancel"
+
+[connection signal="pressed" from="Buttons/OkBtn" to="." method="_on_OkBtn_pressed"]
+[connection signal="pressed" from="Buttons/CancelBtn" to="." method="_on_CancelBtn_pressed"]
