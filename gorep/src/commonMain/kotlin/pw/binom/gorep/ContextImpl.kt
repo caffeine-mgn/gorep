@@ -7,31 +7,53 @@ import pw.binom.io.file.File
 import pw.binom.net.toURI
 import pw.binom.network.NetworkDispatcher
 
-class ContextImpl(val networkDispatcher: NetworkDispatcher, val project: Project, val localCache: LocalCache) :
+class ContextImpl private constructor(
+    val networkDispatcher: NetworkDispatcher,
+    val project: Project,
+    val localCache: LocalCache,
+    val repositories: HashMap<Repository2, Repository>,
+    override val variableReplacer: VariableReplacer
+) :
     Context {
+
+    companion object {
+        suspend fun create(
+            networkDispatcher: NetworkDispatcher,
+            project: Project,
+            localCache: LocalCache,
+            properties: Map<String, String>,
+        ): ContextImpl {
+            val variableReplacer = StandardVariableReplacer(properties = properties)
+            val repositories = HashMap<Repository2, Repository>()
+            project.info.repositories.forEach {
+                val repo = when (it.type) {
+                    RepositoryType.LOCAL -> FileSystemRepository(name = it.name, root = File(it.path))
+                    RepositoryType.WEBDAV -> WebdavRepository.create(
+                        networkDispatcher = networkDispatcher,
+                        name = it.name,
+                        uri = it.path,
+                        auth = it.basicAuth,
+                        variableReplacer = variableReplacer
+                    )
+                }
+                repositories[it] = repo
+            }
+            return ContextImpl(
+                networkDispatcher = networkDispatcher,
+                project = project,
+                localCache = localCache,
+                repositories = repositories,
+                variableReplacer = variableReplacer,
+            )
+        }
+    }
+
     var status = Status.NEW
 
     enum class Status {
         NEW,
         TASKS_RESOLVE,
         FINISH
-    }
-
-    val repositories = HashMap<Repository2, Repository>()
-
-    init {
-        project.info.repositories.forEach {
-            val repo = when (it.type) {
-                RepositoryType.LOCAL -> FileSystemRepository(name = it.name, root = File(it.path))
-                RepositoryType.WEBDAV -> WebdavRepository(
-                    networkDispatcher = networkDispatcher,
-                    name = it.name,
-                    uri = it.path.toURI(),
-                    auth = it.basicAuth
-                )
-            }
-            repositories[it] = repo
-        }
     }
 
     private val _tasks = ArrayList<Task>()

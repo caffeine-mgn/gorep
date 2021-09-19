@@ -17,7 +17,7 @@ fun printHelp() {
 }
 
 @OptIn(ExperimentalTime::class)
-fun runInProject(args: Array<String>, project: Project) {
+fun runInProject(args: Array<String>, project: Project, properties: Map<String, String>) {
     val nt = NetworkDispatcher()
     val totalDuration = measureTime {
         nt.runSingle {
@@ -26,10 +26,11 @@ fun runInProject(args: Array<String>, project: Project) {
             val localCacheFile =
                 File(localCachePath).mkdirs()
                     ?: throw RuntimeException("Can't create local cache by path \"$localCachePath\"")
-            val context = ContextImpl(
+            val context = ContextImpl.create(
                 project = project,
                 localCache = LocalCache(localCacheFile),
-                networkDispatcher = nt
+                networkDispatcher = nt,
+                properties = properties,
             )
             context.status = ContextImpl.Status.TASKS_RESOLVE
 
@@ -62,7 +63,7 @@ fun runInProject(args: Array<String>, project: Project) {
 }
 
 @OptIn(ExperimentalTime::class)
-fun runWithoutProject(args: Array<String>) {
+fun runWithoutProject(args: Array<String>, properties: Map<String, String>) {
     val argsStack = Stack<String>()
     args.forEach {
         argsStack.pushLast(it)
@@ -90,11 +91,19 @@ fun runWithoutProject(args: Array<String>) {
 }
 
 fun main(args: Array<String>) {
+    val properties = args.filter { it.startsWith("-D") }
+        .map { it.removePrefix("-D") }
+        .map {
+            val items = it.split('=', limit = 2)
+            items[0] to (items.getOrNull(1) ?: "")
+        }
+        .toMap()
+    val argsWithoutProperties = args.filter { !it.startsWith("-D") }.toTypedArray()
     val project = Project.open(File(Environment.workDirectory))
     if (project != null) {
-        runInProject(args = args, project = project)
+        runInProject(args = argsWithoutProperties, project = project, properties = properties)
     } else {
-        runWithoutProject(args)
+        runWithoutProject(args = argsWithoutProperties, properties = properties)
     }
 }
 

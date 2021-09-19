@@ -56,13 +56,18 @@ data class Repository2(
     val type: RepositoryType,
     val publish: Boolean = false,
     val basicAuth: BasicAuth? = null,
-)
+) {
+    suspend fun getPath(replacer: VariableReplacer) = replacer.replace(path) ?: path
+}
 
 @Serializable
 data class BasicAuth(
     val login: String,
     val password: String,
-)
+) {
+    suspend fun getLogin(replacer: VariableReplacer): String = replacer.replace(login) ?: login
+    suspend fun getPassword(replacer: VariableReplacer): String = replacer.replace(password) ?: password
+}
 
 @Serializable
 enum class RepositoryType {

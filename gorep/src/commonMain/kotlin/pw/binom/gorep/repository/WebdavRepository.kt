@@ -8,25 +8,44 @@ import pw.binom.io.httpClient.HttpClient
 import pw.binom.io.use
 import pw.binom.net.URI
 import pw.binom.net.toPath
+import pw.binom.net.toURI
 import pw.binom.network.NetworkDispatcher
 import pw.binom.webdav.BasicAuthorization
 import pw.binom.webdav.client.WebDavClient
 
-class WebdavRepository(
+class WebdavRepository private constructor(
     val networkDispatcher: NetworkDispatcher,
     override val name: String,
     val uri: URI,
-    val auth: BasicAuth?,
+    val user: BasicAuthorization?,
 ) : Repository {
+    companion object {
+        suspend fun create(
+            networkDispatcher: NetworkDispatcher,
+            name: String,
+            uri: String,
+            auth: BasicAuth?,
+            variableReplacer: VariableReplacer
+        ): WebdavRepository {
+            val url = (variableReplacer.replace(uri) ?: uri).toURI()
+            val user = auth?.let {
+                BasicAuthorization(
+                    login = it.getLogin(variableReplacer),
+                    password = it.getPassword(variableReplacer),
+                )
+            }
+            return WebdavRepository(
+                networkDispatcher = networkDispatcher,
+                name = name,
+                uri = url,
+                user = user,
+            )
+        }
+    }
+
     private val client = HttpClient.create(networkDispatcher)
     private val webDavclient = WebDavClient(client = client, url = uri)
-
-    private val user =
-        if (auth == null) {
-            null
-        } else {
-            BasicAuthorization(login = auth.login, password = auth.password)
-        }
+    private var currentUser: BasicAuthorization? = null
 
     override suspend fun publish(meta: ArtifactMetaInfo, archive: File) {
         if (!archive.isFile) {
@@ -49,8 +68,8 @@ class WebdavRepository(
 
     override suspend fun download(name: String, version: Version, localCache: LocalCache): ArtifactMetaInfo? {
         val found = webDavclient.useUser(user = user) {
-            val manifest = webDavclient.get("/$name/$version/$MANIFEST_FILE".toPath)?:return@useUser false
-            val archive = webDavclient.get("/$name/$version/$ARCHIVE_FILE".toPath)?:return@useUser false
+            val manifest = webDavclient.get("/$name/$version/$MANIFEST_FILE".toPath) ?: return@useUser false
+            val archive = webDavclient.get("/$name/$version/$ARCHIVE_FILE".toPath) ?: return@useUser false
             val localCacheAddonDir = localCache.root.relative(name).relative(version.toString())
             localCacheAddonDir.mkdirs()
             manifest.read()!!.use { input ->
