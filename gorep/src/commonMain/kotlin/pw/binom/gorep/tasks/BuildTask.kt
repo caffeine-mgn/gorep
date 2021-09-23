@@ -41,7 +41,7 @@ class BuildTask(val context: Context, val project: Project) : Task {
                 return false
             }
         }
-        if (file.isFile && file.extension.lowercase() == "import") {
+        if (file.isFile && file.extension?.lowercase() == "import") {
             return false
         }
         if (file == project.root.relative(".mono")) {

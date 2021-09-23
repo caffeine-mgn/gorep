@@ -1,6 +1,7 @@
 package pw.binom.gorep.repository
 
 import kotlinx.serialization.json.Json
+import pw.binom.AsyncInput
 import pw.binom.ByteBuffer
 import pw.binom.DEFAULT_BUFFER_SIZE
 import pw.binom.copyTo
@@ -22,11 +23,26 @@ class FileSystemRepository(override val name: String, val root: File) : Reposito
         libDir.mkdirs()
         val metaFile = libDir.relative(MANIFEST_FILE)
         val dependency = libDir.relative(ARCHIVE_FILE)
+        libDir.list().forEach {
+            if (it.isFile && it.name != MANIFEST_FILE && it.name != ARCHIVE_FILE) {
+                it.deleteRecursive()
+            }
+        }
         metaFile.rewrite(text = Json.encodeToString(ArtifactMetaInfo.serializer(), meta))
         archive.openRead().use { from ->
             dependency.openWrite(false).use { to ->
                 from.copyTo(to)
             }
+        }
+    }
+
+    override suspend fun publishMeta(name: String, version: Version, fileName: String, input: AsyncInput) {
+        val libDir = repositoryDir
+            .relative(name)
+            .relative(version.toString())
+        libDir.mkdirs()
+        libDir.relative(fileName).openWrite().use { output ->
+            input.copyTo(output)
         }
     }
 

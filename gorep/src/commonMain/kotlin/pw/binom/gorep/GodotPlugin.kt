@@ -6,7 +6,8 @@ object GodotPlugin : Plugin {
     override fun apply(project: Project, context: Context) {
         context.addTask(BuildTask(project = project, context = context))
         context.addTask(ConfigTask(project = project))
-        context.addTask(CheckTask(project = project, context = context))
+        context.addTask(CheckTask(project = project, context = context, name = "check", force = false))
+        context.addTask(CheckTask(project = project, context = context, name = "check_update", force = true))
         context.addTask(UpdateTask(project = project, context = context))
         var publishTaskExist = false
         context.repositoryService.repositories.forEach { repo ->

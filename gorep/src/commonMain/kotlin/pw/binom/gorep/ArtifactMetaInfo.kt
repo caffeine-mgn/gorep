@@ -11,6 +11,8 @@ data class ArtifactMetaInfo(
     override val version: Version,
     val sha256: String,
     override val dependencies: List<Dependency> = emptyList(),
+
+    val metas: List<Meta> = emptyList()
 ) : DepUnit {
     companion object {
         fun readJsonFromText(text: String) = Json.decodeFromString(serializer(), text)

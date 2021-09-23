@@ -47,6 +47,15 @@ data class ProjectInfo(
     val dependencies: List<ProjectDependency> = emptyList(),
     val excludes: List<String> = emptyList(),
     val repositories: List<Repository2> = emptyList(),
+
+    val metas: List<Meta> = emptyList()
+)
+
+@Serializable
+data class Meta(
+    val type: String? = null,
+    val file: String? = null,
+    val value: String? = null,
 )
 
 @Serializable

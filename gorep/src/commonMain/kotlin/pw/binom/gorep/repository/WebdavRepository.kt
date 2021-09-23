@@ -1,5 +1,6 @@
 package pw.binom.gorep.repository
 
+import pw.binom.AsyncInput
 import pw.binom.copyTo
 import pw.binom.gorep.*
 import pw.binom.io.bufferedWriter
@@ -55,6 +56,12 @@ class WebdavRepository private constructor(
         webDavclient.useUser(user = user) {
             webDavclient.mkdirs(dir)
                 ?: TODO("Can't create webdav dir")
+
+            webDavclient.getDir(dir)?.forEach {
+                if (it.isFile && it.name != MANIFEST_FILE && it.name != ARCHIVE_FILE) {
+                    it.delete()
+                }
+            }
             webDavclient.new(dir.append(MANIFEST_FILE)).bufferedWriter().use {
                 it.append(meta.toJson())
             }
@@ -62,6 +69,15 @@ class WebdavRepository private constructor(
                 archive.openRead().use { input ->
                     input.copyTo(out)
                 }
+            }
+        }
+    }
+
+    override suspend fun publishMeta(name: String, version: Version, fileName: String, input: AsyncInput) {
+        val dir = "/${name}/${version}".toPath
+        webDavclient.useUser(user = user) {
+            webDavclient.new(dir.append(fileName, direction = true)).use { output ->
+                input.copyTo(output)
             }
         }
     }
@@ -90,20 +106,3 @@ class WebdavRepository private constructor(
         return localCache.find(name = name, version = version)!!
     }
 }
-
-//suspend fun FileSystem.mkdirs(path: String) {
-//    val items = path.split("/")
-//    val sb = StringBuilder("/")
-//    var first = true
-//    items.forEach { currentDir ->
-//        val current = getDir(currentDir)
-//        if (current==null){
-//            mkdir(currentDir)
-//        }
-//        if (!first) {
-//            sb.append("/")
-//        }
-//        sb.append(currentDir)
-//        first = false
-//    }
-//}

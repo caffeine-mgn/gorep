@@ -29,7 +29,7 @@ class LocalCache(val root: File) {
     suspend fun install(destination: File, name: String, version: Version) {
         val f = find(name = name, version = version) ?: TODO()
         destination.mkdirs()
-        destination.relative("$name.json").rewrite(DepInfo(sha = f.sha256, version = f.version).toJsonText())
+        destination.relative("$name.dependency.json").rewrite(DepInfo(sha = f.sha256, version = f.version).toJsonText())
         val addonDir = destination.relative(name)
         addonDir.mkdirs()
         addonDir.list().forEach {

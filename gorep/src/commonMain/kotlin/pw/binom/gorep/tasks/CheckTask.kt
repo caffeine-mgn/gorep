@@ -4,16 +4,15 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import pw.binom.gorep.*
 import pw.binom.io.file.deleteRecursive
+import pw.binom.io.file.name
 import pw.binom.io.file.readText
 import pw.binom.io.file.relative
 import pw.binom.logger.Logger
 import pw.binom.logger.info
+import pw.binom.logger.warn
 
 
-class CheckTask(val context: Context, val project: Project) : Task {
-
-    override val name: String
-        get() = "check"
+class CheckTask(val context: Context, val project: Project, val force: Boolean, override val name: String) : Task {
 
     private val logger = Logger.getLogger(name)
 
@@ -28,7 +27,7 @@ class CheckTask(val context: Context, val project: Project) : Task {
     }
 
     private suspend fun checkDep(dep: Dep) {
-        val meta = project.addonsDir.relative("${dep.name}.json")
+        val meta = project.addonsDir.relative("${dep.name}.dependency.json")
         val addon = project.addonsDir.relative(dep.name)
         if (!meta.isFile || !addon.isDirectory) {
             logger.info("Install ${dep.name}:${dep.version}")
@@ -57,11 +56,34 @@ class CheckTask(val context: Context, val project: Project) : Task {
         }
     }
 
+    private suspend fun removeDeprecatedDependencies(actualDependencies: List<String>) {
+        val files = project.addonsDir.list()
+//        files.forEach {
+//            if (it.isDirectory && it.name !in actualDependencies && it.name != project.name) {
+//                it.deleteRecursive()
+//            }
+//        }
+        files.forEach {
+            if (it.isFile && it.name.endsWith(".dependency.json")) {
+                val depName = it.name.removeSuffix(".dependency.json")
+                if (depName !in actualDependencies) {
+                    logger.info("Removing Deprecated $depName addon")
+                    it.delete()
+                    project.addonsDir.relative(depName).deleteRecursive()
+                }
+            }
+            if (it.isDirectory && it.name != project.name && it.name !in actualDependencies) {
+                logger.warn("Found unmanaged addon ${it.name}")
+            }
+        }
+    }
+
     override suspend fun run() {
-        val dependencies = project.resolveDependencies(context.repositoryService, forceUpdate = false)
+        project.resolveDependencies(context.repositoryService, forceUpdate = force)
         project.dependencies.forEach {
             checkDep(it)
         }
+        removeDeprecatedDependencies(project.dependencies.map { it.name })
     }
 }
 

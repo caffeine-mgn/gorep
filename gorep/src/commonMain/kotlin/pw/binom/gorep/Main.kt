@@ -37,26 +37,34 @@ fun runInProject(args: Array<String>, project: Project, properties: Map<String, 
             BasePlugin.apply(project = project, context = context)
             GodotPlugin.apply(project = project, context = context)
             context.status = ContextImpl.Status.FINISH
-            val executed = HashSet<Task>()
 
-            suspend fun run(task: Task) {
-                if (task in executed) {
-                    return
-                }
-                executed += task
-                val dependencies = task.getDependencies()
-                dependencies.forEach {
-                    run(it)
-                }
-                println("> Task ${task.name}")
-                task.run()
+            val tc = TaskController(context)
+            val taskForExecute = args.map {
+                context.tasks.find { e->e.name==it }
+                    ?:throw RuntimeException("Can't find task \"$it\"")
             }
+            tc.run(taskForExecute)
 
-
-            args.forEach { arg ->
-                val task = context.tasks.find { it.name == arg } ?: TODO("Task \"$arg\" not found")
-                run(task)
-            }
+//            val executed = HashSet<Task>()
+//
+//            suspend fun run(task: Task) {
+//                if (task in executed) {
+//                    return
+//                }
+//                executed += task
+//                val dependencies = task.getDependencies()
+//                dependencies.forEach {
+//                    run(it)
+//                }
+//                println("> Task ${task.name}")
+//                task.run()
+//            }
+//
+//
+//            args.forEach { arg ->
+//                val task = context.tasks.find { it.name == arg } ?: TODO("Task \"$arg\" not found")
+//                run(task)
+//            }
         }
     }
     println("SUCCESSFUL in $totalDuration")
