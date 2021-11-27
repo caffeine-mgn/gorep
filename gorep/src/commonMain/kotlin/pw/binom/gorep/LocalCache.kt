@@ -16,7 +16,11 @@ class LocalCache(val root: File) {
     fun find(name: String, version: Version): ArtifactMetaInfo? {
         val manifest =
             root.relative(name).relative(version.toString()).relative(MANIFEST_FILE).takeIfFile() ?: return null
-        return ArtifactMetaInfo.readJsonFromText(manifest.readText())
+        try {
+            return ArtifactMetaInfo.readJsonFromText(manifest.readText())
+        } catch (e: Throwable) {
+            throw RuntimeException("Can't parse $manifest", e)
+        }
     }
 
     /**

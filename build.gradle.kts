@@ -6,7 +6,8 @@ buildscript {
     repositories {
         mavenCentral()
         mavenLocal()
-        maven(url="https://plugins.gradle.org/m2/")
+        maven(url = "https://repo.binom.pw")
+        maven(url = "https://plugins.gradle.org/m2/")
     }
     dependencies {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${pw.binom.Versions.KOTLIN_VERSION}")
@@ -18,11 +19,12 @@ buildscript {
 
 allprojects {
     group = "pw.binom.repo"
+    version = "0.0.1"
 
     repositories {
         mavenLocal()
         mavenCentral()
         jcenter()
-        maven(url="https://repo.binom.pw/releases")
+        maven(url = "https://repo.binom.pw")
     }
 }

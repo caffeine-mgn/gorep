@@ -23,16 +23,20 @@ class ConfigTask(val project: Project) : Task {
         pluginCfgDir.openWrite().use {
             makePluginCfg(it)
         }
+        val projectFile = project.root.relative("project.godot")
+        if (!projectFile.isFile && !projectFile.isExist) {
+            projectFile.openWrite().close()
+        }
     }
 
     private fun makePluginCfg(output: Output) {
         output.bufferedWriter().let {
             it.append("[plugin]\n")
-                .append("name=\"${project.info.title}\"\n")
-                .append("description=\"${project.info.dependencies}\"\n")
-                .append("version=\"${project.info.version}\"\n")
-                .append("script=\"${project.info.script}\"\n")
-                .append("author=\"${project.info.author ?: ""}\"\n")
+                    .append("name=\"${project.info.title}\"\n")
+                    .append("version=\"${project.info.version}\"\n")
+                    .append("script=\"${project.info.script}\"\n")
+                    .append("description=\"${project.info.description ?: ""}\"\n")
+                    .append("author=\"${project.info.author ?: ""}\"\n")
             it.flush()
         }
     }

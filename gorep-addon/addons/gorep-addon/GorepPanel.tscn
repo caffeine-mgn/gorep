@@ -1,0 +1,40 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://addons/gorep-addon/GorepPanel.gd" type="Script" id=1]
+
+[node name="Gorep" type="VBoxContainer"]
+margin_right = 40.0
+margin_bottom = 40.0
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Dependencies" type="Button" parent="."]
+margin_right = 104.0
+margin_bottom = 20.0
+text = "Dependencies"
+
+[node name="Check" type="Button" parent="."]
+margin_top = 24.0
+margin_right = 104.0
+margin_bottom = 44.0
+text = "Check"
+
+[node name="Update" type="Button" parent="."]
+margin_top = 48.0
+margin_right = 104.0
+margin_bottom = 68.0
+text = "Update"
+
+[node name="Publish" type="Button" parent="."]
+margin_top = 72.0
+margin_right = 104.0
+margin_bottom = 92.0
+text = "Publish"
+
+[connection signal="button_down" from="Dependencies" to="." method="_on_Dependencies_button_down"]
+[connection signal="pressed" from="Dependencies" to="." method="_on_Dependencies_pressed"]
+[connection signal="pressed" from="Check" to="." method="_on_Check_pressed"]
+[connection signal="pressed" from="Update" to="." method="_on_Update_pressed"]
+[connection signal="pressed" from="Publish" to="." method="_on_Publish_pressed"]

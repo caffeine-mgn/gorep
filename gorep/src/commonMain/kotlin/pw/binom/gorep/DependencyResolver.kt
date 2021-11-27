@@ -57,6 +57,29 @@ class DepUnitW(val unit: DepUnit, var type: DepType) : DepUnit {
         get() = unit.version
     override val dependencies: Collection<Dep>
         get() = deps
+
+    fun flatAllDependencies(): List<Dep> {
+        val parsed = HashSet<DepUnitW>()
+        val forParse = ArrayList<DepUnitW>()
+        this.deps.forEach {
+            forParse += it.module.depUnit
+        }
+        while (forParse.isNotEmpty()) {
+            val l = forParse.removeLast()
+            if (l === this) {
+                continue
+            }
+            if (parsed.add(l)) {
+                l.deps.forEach {
+                    forParse += it.module.depUnit
+                }
+            }
+        }
+
+        return parsed.map {
+            ProjectDependency(name = it.name, version = it.version, type = it.type)
+        }
+    }
 }
 
 private fun checkCycleOneDep(dep: DepUnitW) {

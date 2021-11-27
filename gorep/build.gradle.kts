@@ -1,9 +1,14 @@
 plugins {
+    id("idea")
     id("kotlin-multiplatform")
     id("kotlinx-serialization")
     id("com.github.johnrengelman.shadow").version("5.2.0")
 }
-
+idea {
+    module {
+        isDownloadSources = true
+    }
+}
 val nativeEntryPoint = "pw.binom.gorep.main"
 
 kotlin {
@@ -14,10 +19,12 @@ kotlin {
             }
         }
     }
-    linuxArm32Hfp { // Use your target instead.
-        binaries {
-            executable {
-                entryPoint = nativeEntryPoint
+    if (pw.binom.Target.LINUX_ARM32HFP_SUPPORT) {
+        linuxArm32Hfp { // Use your target instead.
+            binaries {
+                executable {
+                    entryPoint = nativeEntryPoint
+                }
             }
         }
     }
@@ -28,11 +35,18 @@ kotlin {
             }
         }
     }
-    mingwX86 { // Use your target instead.
-        binaries {
-            executable {
-                entryPoint = nativeEntryPoint
+    if (pw.binom.Target.MINGW_X86_SUPPORT) {
+        mingwX86 { // Use your target instead.
+            binaries {
+                executable {
+                    entryPoint = nativeEntryPoint
+                }
             }
+        }
+    }
+    macosX64 {
+        binaries {
+            executable()
         }
     }
     jvm()
@@ -51,6 +65,7 @@ kotlin {
                 api("org.jetbrains.kotlinx:kotlinx-serialization-core:${pw.binom.Versions.SERIALIZATION_VERSION}")
                 api("org.jetbrains.kotlinx:kotlinx-serialization-json:${pw.binom.Versions.SERIALIZATION_VERSION}")
             }
+            kotlin.srcDir("build/gen")
         }
 
         val nativeMain by creating {
@@ -69,15 +84,19 @@ kotlin {
             }
         }
 
-        val mingwX86Main by getting {
-            dependencies {
-                dependsOn(mingwX64Main)
+        if (pw.binom.Target.MINGW_X86_SUPPORT) {
+            val mingwX86Main by getting {
+                dependencies {
+                    dependsOn(mingwX64Main)
+                }
             }
         }
 
-        val linuxArm32HfpMain by getting {
-            dependencies {
-                dependsOn(linuxX64Main)
+        if (pw.binom.Target.LINUX_ARM32HFP_SUPPORT) {
+            val linuxArm32HfpMain by getting {
+                dependencies {
+                    dependsOn(linuxX64Main)
+                }
             }
         }
 
@@ -124,4 +143,36 @@ tasks {
             attributes("Main-Class" to "pw.binom.gorep.JvmMain")
         }
     }
+
+    val generateVersion = create("generateVersion") {
+        val sourceDir = project.buildDir.resolve("gen/pw/binom/gorep")
+        sourceDir.mkdirs()
+        val versionSource = sourceDir.resolve("version.kt")
+        outputs.files(versionSource)
+        inputs.property("version", project.version)
+
+        versionSource.writeText(
+                """package pw.binom.gorep
+            
+const val GOREP_VERSION = "${project.version}""""
+        )
+    }
+
+    if (pw.binom.Target.LINUX_ARM32HFP_SUPPORT) {
+        this["compileKotlinLinuxArm32Hfp"].dependsOn(generateVersion)
+    }
+    if (pw.binom.Target.LINUX_ARM64_SUPPORT) {
+        this["compileKotlinLinuxArm64"].dependsOn(generateVersion)
+    }
+//    this["compileKotlinLinuxMips32"].dependsOn(generateVersion)
+//    this["compileKotlinLinuxMipsel32"].dependsOn(generateVersion)
+    this["compileKotlinLinuxX64"].dependsOn(generateVersion)
+    this["compileKotlinMacosX64"].dependsOn(generateVersion)
+    this["compileKotlinMingwX64"].dependsOn(generateVersion)
+    if (pw.binom.Target.MINGW_X86_SUPPORT) {
+        this["compileKotlinMingwX86"].dependsOn(generateVersion)
+    }
+//    this["compileKotlinJsIr"].dependsOn(generateVersion)
+//    this["compileKotlinJsLegacy"].dependsOn(generateVersion)
+    this["compileKotlinJvm"].dependsOn(generateVersion)
 }

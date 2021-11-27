@@ -1,27 +1,30 @@
 package pw.binom.gorep
 
+import kotlinx.coroutines.Dispatchers
 import pw.binom.gorep.repository.FileSystemRepository
 import pw.binom.gorep.repository.Repository
 import pw.binom.gorep.repository.WebdavRepository
 import pw.binom.io.file.File
-import pw.binom.net.toURI
-import pw.binom.network.NetworkDispatcher
+import pw.binom.network.Network
+import pw.binom.network.NetworkCoroutineDispatcher
 
 class ContextImpl private constructor(
-    val networkDispatcher: NetworkDispatcher,
+    val networkDispatcher: NetworkCoroutineDispatcher,
     val project: Project,
     val localCache: LocalCache,
     val repositories: HashMap<Repository2, Repository>,
-    override val variableReplacer: VariableReplacer
+    override val variableReplacer: VariableReplacer,
+    override val verbose: Boolean,
 ) :
     Context {
 
     companion object {
         suspend fun create(
-            networkDispatcher: NetworkDispatcher,
-            project: Project,
-            localCache: LocalCache,
-            properties: Map<String, String>,
+                networkDispatcher: NetworkCoroutineDispatcher = Dispatchers.Network,
+                project: Project,
+                localCache: LocalCache,
+                properties: Map<String, String>,
+                verbose: Boolean,
         ): ContextImpl {
             val variableReplacer = StandardVariableReplacer(properties = properties)
             val repositories = HashMap<Repository2, Repository>()
@@ -33,7 +36,8 @@ class ContextImpl private constructor(
                         name = it.name,
                         uri = it.path,
                         auth = it.basicAuth,
-                        variableReplacer = variableReplacer
+                        variableReplacer = variableReplacer,
+                        verbose=verbose,
                     )
                 }
                 repositories[it] = repo
@@ -44,6 +48,7 @@ class ContextImpl private constructor(
                 localCache = localCache,
                 repositories = repositories,
                 variableReplacer = variableReplacer,
+                verbose = verbose,
             )
         }
     }

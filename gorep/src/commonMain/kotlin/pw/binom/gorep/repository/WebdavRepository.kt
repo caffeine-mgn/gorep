@@ -6,27 +6,30 @@ import pw.binom.gorep.*
 import pw.binom.io.bufferedWriter
 import pw.binom.io.file.*
 import pw.binom.io.httpClient.HttpClient
+import pw.binom.io.httpClient.create
 import pw.binom.io.use
 import pw.binom.net.URI
 import pw.binom.net.toPath
 import pw.binom.net.toURI
-import pw.binom.network.NetworkDispatcher
+import pw.binom.network.NetworkCoroutineDispatcher
 import pw.binom.webdav.BasicAuthorization
 import pw.binom.webdav.client.WebDavClient
 
 class WebdavRepository private constructor(
-    val networkDispatcher: NetworkDispatcher,
+    val networkDispatcher: NetworkCoroutineDispatcher,
     override val name: String,
     val uri: URI,
     val user: BasicAuthorization?,
+    val verbose: Boolean,
 ) : Repository {
     companion object {
         suspend fun create(
-            networkDispatcher: NetworkDispatcher,
+            networkDispatcher: NetworkCoroutineDispatcher,
             name: String,
             uri: String,
             auth: BasicAuth?,
-            variableReplacer: VariableReplacer
+            variableReplacer: VariableReplacer,
+            verbose: Boolean,
         ): WebdavRepository {
             val url = (variableReplacer.replace(uri) ?: uri).toURI()
             val user = auth?.let {
@@ -40,13 +43,13 @@ class WebdavRepository private constructor(
                 name = name,
                 uri = url,
                 user = user,
+                verbose = verbose,
             )
         }
     }
 
     private val client = HttpClient.create(networkDispatcher)
     private val webDavclient = WebDavClient(client = client, url = uri)
-    private var currentUser: BasicAuthorization? = null
 
     override suspend fun publish(meta: ArtifactMetaInfo, archive: File) {
         if (!archive.isFile) {
@@ -56,7 +59,6 @@ class WebdavRepository private constructor(
         webDavclient.useUser(user = user) {
             webDavclient.mkdirs(dir)
                 ?: TODO("Can't create webdav dir")
-
             webDavclient.getDir(dir)?.forEach {
                 if (it.isFile && it.name != MANIFEST_FILE && it.name != ARCHIVE_FILE) {
                     it.delete()
@@ -93,10 +95,14 @@ class WebdavRepository private constructor(
                     input.copyTo(output)
                 }
             }
-            archive.read()!!.use { input ->
-                localCacheAddonDir.relative(ARCHIVE_FILE).openWrite().use { output ->
-                    input.copyTo(output)
+            try {
+                archive.read()!!.use { input ->
+                    localCacheAddonDir.relative(ARCHIVE_FILE).openWrite().use { output ->
+                        input.copyTo(output)
+                    }
                 }
+            } catch (e: Throwable) {
+                throw RuntimeException("Can't download $archive", e)
             }
             true
         }

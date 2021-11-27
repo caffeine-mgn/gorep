@@ -6,10 +6,10 @@ import pw.binom.io.file.File
 import pw.binom.io.file.mkdirs
 import pw.binom.io.file.relative
 import pw.binom.io.file.rewrite
-import pw.binom.network.NetworkDispatcher
 import kotlin.native.concurrent.SharedImmutable
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
+import kotlinx.coroutines.runBlocking
 
 fun printHelp() {
     println("Help:")
@@ -17,20 +17,19 @@ fun printHelp() {
 }
 
 @OptIn(ExperimentalTime::class)
-fun runInProject(args: Array<String>, project: Project, properties: Map<String, String>) {
-    val nt = NetworkDispatcher()
+fun runInProject(args: List<String>, project: Project, properties: Map<String, String>, verbose: Boolean) {
     val totalDuration = measureTime {
-        nt.runSingle {
+        runBlocking {
             val localCachePath =
-                Environment.getEnv("GOREP_LOCAL_CACHE") ?: "${Environment.userDirectory}${File.SEPARATOR}/.gorep"
+                    Environment.getEnv("GOREP_LOCAL_CACHE") ?: "${Environment.userDirectory}${File.SEPARATOR}/.gorep"
             val localCacheFile =
-                File(localCachePath).mkdirs()
-                    ?: throw RuntimeException("Can't create local cache by path \"$localCachePath\"")
+                    File(localCachePath).mkdirs()
+                            ?: throw RuntimeException("Can't create local cache by path \"$localCachePath\"")
             val context = ContextImpl.create(
-                project = project,
-                localCache = LocalCache(localCacheFile),
-                networkDispatcher = nt,
-                properties = properties,
+                    project = project,
+                    localCache = LocalCache(localCacheFile),
+                    properties = properties,
+                    verbose = verbose,
             )
             context.status = ContextImpl.Status.TASKS_RESOLVE
 
@@ -40,8 +39,8 @@ fun runInProject(args: Array<String>, project: Project, properties: Map<String, 
 
             val tc = TaskController(context)
             val taskForExecute = args.map {
-                context.tasks.find { e->e.name==it }
-                    ?:throw RuntimeException("Can't find task \"$it\"")
+                context.tasks.find { e -> e.name == it }
+                        ?: throw RuntimeException("Can't find task \"$it\"")
             }
             tc.run(taskForExecute)
 
@@ -71,7 +70,7 @@ fun runInProject(args: Array<String>, project: Project, properties: Map<String, 
 }
 
 @OptIn(ExperimentalTime::class)
-fun runWithoutProject(args: Array<String>, properties: Map<String, String>) {
+fun runWithoutProject(args: List<String>, properties: Map<String, String>, verbose: Boolean) {
     val argsStack = Stack<String>()
     args.forEach {
         argsStack.pushLast(it)
@@ -98,20 +97,57 @@ fun runWithoutProject(args: Array<String>, properties: Map<String, String>) {
     println("SUCCESSFUL in $totalDuration")
 }
 
-fun main(args: Array<String>) {
-    val properties = args.filter { it.startsWith("-D") }
-        .map { it.removePrefix("-D") }
-        .map {
-            val items = it.split('=', limit = 2)
-            items[0] to (items.getOrNull(1) ?: "")
+fun <T> MutableCollection<T>.removeIf(func: (T) -> Boolean) {
+    val it = iterator()
+    while (it.hasNext()) {
+        if (func(it.next())) {
+            it.remove()
         }
-        .toMap()
-    val argsWithoutProperties = args.filter { !it.startsWith("-D") }.toTypedArray()
+    }
+}
+
+fun printVersion() {
+    println("Gorep $GOREP_VERSION")
+}
+
+fun main(args: Array<String>) {
+    val argsList = args.toMutableList()
+
+    if (argsList.size == 1 && "--version" in argsList) {
+        printVersion()
+        return
+    }
+
+    val properties = HashMap<String, String>()
+    argsList.removeIf {
+        if (it.startsWith("-D")) {
+            val items = it.split('=', limit = 2)
+            properties[items[0].substring(2)] = items.getOrNull(1) ?: ""
+            return@removeIf true
+        }
+        false
+    }
+//    val properties1 = args.filter { it.startsWith("-D") }
+//        .map { it.removePrefix("-D") }
+//        .map {
+//            val items = it.split('=', limit = 2)
+//            items[0] to (items.getOrNull(1) ?: "")
+//        }
+//        .toMap()
+    var verbose = false
+    argsList.removeIf {
+        if (it == "-v" || it == "--verbose") {
+            verbose = true
+            return@removeIf true
+        }
+        false
+    }
+
     val project = Project.open(File(Environment.workDirectory))
     if (project != null) {
-        runInProject(args = argsWithoutProperties, project = project, properties = properties)
+        runInProject(args = argsList, project = project, properties = properties, verbose = verbose)
     } else {
-        runWithoutProject(args = argsWithoutProperties, properties = properties)
+        runWithoutProject(args = argsList, properties = properties, verbose = verbose)
     }
 }
 
@@ -144,10 +180,10 @@ class InitTask(val directory: File) : Task2 {
 
     override fun execute() {
         val info = ProjectInfo(
-            name = "init",
-            title = "StartUp",
-            version = Version("0.0.1"),
-            dependencies = emptyList(),
+                name = "init",
+                title = "StartUp",
+                version = Version("0.0.1"),
+                dependencies = emptyList(),
         )
         val json = prettyJson.encodeToString(ProjectInfo.serializer(), info)
         directory.relative(PROJECT_FILE).rewrite(json)

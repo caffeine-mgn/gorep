@@ -1,8 +1,8 @@
 package pw.binom
 
 object Versions {
-    val BINOM_VERSION = "0.1.31"
-    val KOTLIN_VERSION = "1.5.30"
-    val SERIALIZATION_VERSION = "1.2.1"
-    val STATIC_CSS_VERSION = "0.1.28"
+    val BINOM_VERSION = "0.1.32"
+    val KOTLIN_VERSION = "1.6.0"
+    val SERIALIZATION_VERSION = "1.3.0"
+    val STATIC_CSS_VERSION = "0.1.29"
 }
