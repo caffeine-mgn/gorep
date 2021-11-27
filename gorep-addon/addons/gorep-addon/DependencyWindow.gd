@@ -22,6 +22,7 @@ func popupEdit(name:String, version:String, typeId:int):
 	artifactName.text = name
 	artifactVersion.text = version
 	artifactType.selected = typeId
+	_check_valid()
 	popup_centered()
 
 func popupNew():
@@ -29,6 +30,7 @@ func popupNew():
 	artifactName.text = ""
 	artifactVersion.text = "1.0"
 	artifactType.selected = 0
+	_check_valid()
 	popup_centered()
 #	hide()
 #	if (get_parent()!=null):
@@ -43,3 +45,8 @@ func _on_OkBtn_pressed():
 func _on_CancelBtn_pressed():
 	emit_signal("cancelled")
 	hide()
+
+
+func _check_valid():
+	var valid = artifactName.text.length()>0 && artifactVersion.text.length()>0
+	okBtn.disabled = !valid

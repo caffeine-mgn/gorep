@@ -16,10 +16,10 @@ func _ready():
 	win.connect("cancelled", self, "_depepdency_window_cancelled")
 
 var manifest = null
-onready var addBtn:Button = $TabContainer/Dependencies/Buttons/AddBtn
-onready var removeBtn:Button = $TabContainer/Dependencies/Buttons/RemoveBtn
-onready var editBtn:Button = $TabContainer/Dependencies/Buttons/EditBtn
-onready var dependencies:ItemList = $TabContainer/Dependencies/List
+onready var addBtn:Button = $Dependencies/Buttons/AddBtn
+onready var removeBtn:Button = $Dependencies/Buttons/RemoveBtn
+onready var editBtn:Button = $Dependencies/Buttons/EditBtn
+onready var dependencies:ItemList = $Dependencies/List
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 #func _process(delta):
@@ -39,6 +39,7 @@ func _on_RemoveBtn_pressed():
 
 
 func _on_GorepWindow_about_to_show():
+	dependencies.clear()
 	var f = File.new()
 	var ok = f.open("res://gorep_project.json", File.READ)
 	if (ok == 0):
@@ -84,6 +85,7 @@ func _dependency_window_finished():
 			"type": type
 		}
 		dependencies.select(editing_dependency_index)
+	save()
 
 func _depepdency_window_cancelled():
 	editing_dependency_index = -1
@@ -95,9 +97,26 @@ func _on_EditBtn_pressed():
 		editing_dependency_index = selected[0]
 		var e = manifest["dependencies"][selected[0]]
 		var type = e.get("type","EXTERNAL")
-		var typeId = 0
-		if (type == "EXTERNAL"):
-			typeId = 0
-		if (type == "INTERNAL"):
-			typeId = 1
+		
+		var typeId = Utils.dependency_str_to_int(type)
 		win.popupEdit(e.get("name"),e.get("version"), typeId)
+
+func save():
+	var json = JSON.print(manifest)
+	var f = File.new()
+	var ok = f.open("res://gorep_project.json", File.WRITE)
+	if (ok == 0):
+		var txt=f.store_string(json)
+		f.close()
+		print("gorep_project.json updated")
+
+
+func _on_List_gui_input(event):
+	if event is InputEventMouseButton and event.button_index == BUTTON_LEFT:
+		if event.doubleclick:
+			_on_EditBtn_pressed()
+
+
+func _on_List_nothing_selected():
+	editBtn.disabled = true
+	removeBtn.disabled = true

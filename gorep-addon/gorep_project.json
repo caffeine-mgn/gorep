@@ -1,0 +1,25 @@
+{
+  "name": "gorep-addon",
+  "title": "Gorep",
+  "author": "Anton Subochev",
+  "version": "1.0.0",
+  "dependencies": [
+    {
+      "name": "godot-plugin-refresher",
+      "version": "1.0",
+      "type": "INTERNAL"
+    }
+  ],
+  "repositories": [
+    {
+      "name": "owncloud",
+      "path": "{env.GOREP_URL}",
+      "type": "WEBDAV",
+      "publish": true,
+      "basicAuth": {
+        "login": "{env.GOREP_LOGIN}",
+        "password": "{env.GOREP_PASSWORD}"
+      }
+    }
+  ]
+}
