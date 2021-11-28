@@ -14,11 +14,16 @@ import pw.binom.io.use
 import pw.binom.nextUuid
 import kotlin.random.Random
 
-class PublishTask(val context: Context, val project: Project, val repository: Repository) : Task {
-    override val name: String = "publish_${repository.name}"
+class PublishTask(val context: Context, val project: Project, val repository: Repository) : AbstractTask() {
+    companion object {
+        val CLASS = "publish"
+    }
 
-    override val description: String?
-        get() = "Publishing to ${repository.name} repository"
+    override val name: String = "publish_${repository.name}"
+    override val clazz: String
+        get() = CLASS
+
+    override var description: String? = "Publishing to ${repository.name} repository"
 
     private fun findBuildTask() = context.tasks.asSequence().mapNotNull {
         if (it !is BuildTask) {
@@ -30,10 +35,10 @@ class PublishTask(val context: Context, val project: Project, val repository: Re
         it
     }.firstOrNull()
 
-    override fun getDependencies(): List<Task> {
-        val buildTask = findBuildTask() ?: TODO("Can't find build task")
-        return listOf(buildTask)
-    }
+//    override fun getDependencies(): List<Task> {
+//        val buildTask = findBuildTask() ?: TODO("Can't find build task")
+//        return listOf(buildTask)
+//    }
 
     override suspend fun run() {
         val buildTask = findBuildTask() ?: TODO()

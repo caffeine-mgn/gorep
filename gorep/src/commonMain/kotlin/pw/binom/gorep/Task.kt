@@ -1,10 +1,10 @@
 package pw.binom.gorep
 
 interface Task {
-    val description: String?
-        get() = null
+    var description: String?
     val name: String
-    fun getDependencies(): List<Task>
+    var taskSelector: TaskSelector
+    val clazz: String
     fun define(context: Context) {}
     suspend fun run()
 }

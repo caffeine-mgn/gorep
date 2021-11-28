@@ -2,6 +2,8 @@ package pw.binom.gorep
 
 class TaskController(val context: Context) {
 
+    private val dependencies = HashMap<Task, List<Task>>()
+
     private fun checkCycleDependency(task: Task) {
         val checked = HashSet<Task>()
         val forCheck = ArrayList<Task>()
@@ -11,14 +13,14 @@ class TaskController(val context: Context) {
                 throw RuntimeException("Cycle dependency between tasks ${task.name} and ${t.name}")
             }
             checked += t
-            t.getDependencies().forEach {
+            dependencies[t]?.forEach {
                 if (it in checked) {
                     return@forEach
                 }
                 forCheck.add(it)
             }
         }
-        task.getDependencies().forEach {
+        dependencies[task]?.forEach {
             forCheck += it
         }
         while (forCheck.isNotEmpty()) {
@@ -34,7 +36,7 @@ class TaskController(val context: Context) {
             return
         }
         alreadyExecuted += task
-        val dependencies = task.getDependencies()
+        val dependencies = dependencies[task]?: emptyList()
         dependencies.forEach {
             run(it)
         }
@@ -42,11 +44,29 @@ class TaskController(val context: Context) {
         task.run()
     }
 
+    fun resolve(project: Project) {
+        context.tasks.forEach {
+            val deps = it.taskSelector.select(context, project).map { unwrap(it) }
+            dependencies[unwrap(it)] = deps
+        }
+    }
+
+    private fun unwrap(task: Task) =
+        if (task is LinkedTask) {
+            if (task.implement == null) {
+                TODO("Can't resolve task \"${task.name}\"")
+            }
+            task.implement!!
+        } else {
+            task
+        }
+
     suspend fun run(tasks: List<Task>) {
-        tasks.forEach {
+        val unwrapedTask = tasks.map { unwrap(it) }
+        unwrapedTask.forEach {
             checkCycleDependency(it)
         }
-        tasks.forEach {
+        unwrapedTask.forEach {
             run(it)
         }
     }

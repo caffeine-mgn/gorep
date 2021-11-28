@@ -3,15 +3,13 @@ package pw.binom.gorep.tasks
 import pw.binom.gorep.Context
 import pw.binom.gorep.Task
 
-class PublishAllTask(val context: Context) : Task {
+class PublishAllTask(val context: Context) : AbstractTask() {
     override val name: String
         get() = "publish"
+    override val clazz: String
+        get() = "meta"
 
-    override val description: String
-        get() = "Publishing to all repositories"
-
-    override fun getDependencies(): List<Task> =
-        context.tasks.filter { it is PublishTask }
+    override var description: String? = "Publishing to all repositories"
 
     override suspend fun run() {
 

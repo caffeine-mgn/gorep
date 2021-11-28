@@ -18,13 +18,12 @@ buildscript {
 
 
 allprojects {
-    group = "pw.binom.repo"
-    version = "0.0.1"
+    group = "pw.binom.gorep"
+    version = "0.1"
 
     repositories {
         mavenLocal()
         mavenCentral()
-        jcenter()
         maven(url = "https://repo.binom.pw")
     }
 }

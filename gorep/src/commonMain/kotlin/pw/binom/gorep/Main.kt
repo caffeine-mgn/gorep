@@ -10,6 +10,7 @@ import kotlin.native.concurrent.SharedImmutable
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 import kotlinx.coroutines.runBlocking
+import pw.binom.gorep.lua.LuaPlugin
 
 fun printHelp() {
     println("Help:")
@@ -35,9 +36,11 @@ fun runInProject(args: List<String>, project: Project, properties: Map<String, S
 
             BasePlugin.apply(project = project, context = context)
             GodotPlugin.apply(project = project, context = context)
+            LuaPlugin.apply(project = project, context = context)
+            val tc = TaskController(context)
+            tc.resolve(project)
             context.status = ContextImpl.Status.FINISH
 
-            val tc = TaskController(context)
             val taskForExecute = args.map {
                 context.tasks.find { e -> e.name == it }
                         ?: throw RuntimeException("Can't find task \"$it\"")

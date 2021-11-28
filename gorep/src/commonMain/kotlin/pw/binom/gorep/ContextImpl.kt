@@ -20,11 +20,11 @@ class ContextImpl private constructor(
 
     companion object {
         suspend fun create(
-                networkDispatcher: NetworkCoroutineDispatcher = Dispatchers.Network,
-                project: Project,
-                localCache: LocalCache,
-                properties: Map<String, String>,
-                verbose: Boolean,
+            networkDispatcher: NetworkCoroutineDispatcher = Dispatchers.Network,
+            project: Project,
+            localCache: LocalCache,
+            properties: Map<String, String>,
+            verbose: Boolean,
         ): ContextImpl {
             val variableReplacer = StandardVariableReplacer(properties = properties)
             val repositories = HashMap<Repository2, Repository>()
@@ -37,7 +37,7 @@ class ContextImpl private constructor(
                         uri = it.path,
                         auth = it.basicAuth,
                         variableReplacer = variableReplacer,
-                        verbose=verbose,
+                        verbose = verbose,
                     )
                 }
                 repositories[it] = repo
@@ -62,15 +62,40 @@ class ContextImpl private constructor(
     }
 
     private val _tasks = ArrayList<Task>()
+    override fun getTaskByName(name: String): Task {
+        val found = _tasks.find { it.name == name }
+        if (found != null) {
+            return found
+        }
+        val linkedTask = LinkedTask(name = name)
+        _tasks += linkedTask
+        return linkedTask
+    }
+
     override val tasks: List<Task>
         get() = _tasks
     override val repositoryService: RepositoryService =
         RepositoryService(repositories = repositories.values, localCache = localCache)
 
-    override fun addTask(task: Task) {
+    override fun addTask(task: Task): Task {
+        if (task is LinkedTask) {
+            throw IllegalStateException("Can't add linked task via external api")
+        }
         if (status != Status.TASKS_RESOLVE) {
             throw IllegalStateException()
         }
+        val linkedTask = _tasks.find { it.name == task.name }
+        if (linkedTask != null) {
+            if (linkedTask is LinkedTask) {
+                linkedTask.implement = task
+                return linkedTask
+            }
+            throw IllegalArgumentException("Task \"${task.name}\" already exist")
+        }
         _tasks += task
+        return task
     }
+
+    override fun findTasks(selector: TaskSelector): List<Task> =
+        selector.select(this, project)
 }

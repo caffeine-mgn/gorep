@@ -4,7 +4,9 @@ import pw.binom.gorep.tasks.*
 
 object GodotPlugin : Plugin {
     override fun apply(project: Project, context: Context) {
-        context.addTask(BuildTask(project = project, context = context))
+        context.addTask(BuildTask(project = project, context = context)).also {
+            it.taskSelector += it.taskSelector + context.getTaskByName(ConfigTask.BASE_NAME)
+        }
         context.addTask(ConfigTask(project = project))
         context.addTask(CheckTask(project = project, context = context, name = "check", force = false))
         context.addTask(CheckTask(project = project, context = context, name = "check_update", force = true))
@@ -15,10 +17,14 @@ object GodotPlugin : Plugin {
                 return@forEach
             }
             publishTaskExist = true
-            context.addTask(PublishTask(context = context, project = project, repository = repo))
+            context.addTask(PublishTask(context = context, project = project, repository = repo)).also {
+                it.taskSelector = it.taskSelector + TaskSelector.WithType(BuildTask::class)
+            }
         }
         if (publishTaskExist) {
-            context.addTask(PublishAllTask(context))
+            context.addTask(PublishAllTask(context)).also {
+                it.taskSelector = it.taskSelector + TaskSelector.WithType(PublishTask::class)
+            }
         }
     }
 }

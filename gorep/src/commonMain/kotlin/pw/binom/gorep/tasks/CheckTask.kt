@@ -11,17 +11,16 @@ import pw.binom.logger.info
 import pw.binom.logger.warn
 
 
-class CheckTask(val context: Context, val project: Project, val force: Boolean, override val name: String) : Task {
+class CheckTask(val context: Context, val project: Project, val force: Boolean, override val name: String) :
+    AbstractTask() {
 
     private val logger = Logger.getLogger(name)
 
-    override fun getDependencies(): List<Task> = emptyList()
-
     private suspend fun install(dep: Dep) {
         context.repositoryService.localCache.install(
-                destination = project.addonsDir,
-                name = dep.name,
-                version = dep.version,
+            destination = project.addonsDir,
+            name = dep.name,
+            version = dep.version,
         )
         project.addonsDir.relative(dep.name).relative(".gitignore").openWrite().bufferedAsciiWriter().use {
             it.append("**")
@@ -47,7 +46,7 @@ class CheckTask(val context: Context, val project: Project, val force: Boolean, 
             return
         }
         val depInfo = context.repositoryService.localCache.find(name = dep.name, version = dep.version)
-                ?: throw RuntimeException("Dependency ${dep.name}:${dep.version} lost")
+            ?: throw RuntimeException("Dependency ${dep.name}:${dep.version} lost")
 
         if (info.sha != depInfo.sha256) {
             logger.info("Reinstall ${dep.name}:${dep.version}")
@@ -74,6 +73,9 @@ class CheckTask(val context: Context, val project: Project, val force: Boolean, 
             }
         }
     }
+
+    override val clazz: String
+        get() = "config"
 
     override suspend fun run() {
         val gitignoreInAddons = project.addonsDir.relative(".gitignore")

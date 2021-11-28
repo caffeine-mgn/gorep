@@ -3,7 +3,7 @@ package pw.binom.gorep.tasks
 import pw.binom.gorep.*
 import pw.binom.io.file.deleteRecursive
 
-abstract class AbstractGodotCheckTask(val context: Context, val project: Project) : Task {
+abstract class AbstractGodotCheckTask(val context: Context, val project: Project) : AbstractTask() {
 
     protected abstract fun check(name: String, version: Version)
 

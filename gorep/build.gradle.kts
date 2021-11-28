@@ -62,6 +62,7 @@ kotlin {
                 api("pw.binom.io:ssl:${pw.binom.Versions.BINOM_VERSION}")
                 api("pw.binom.io:process:${pw.binom.Versions.BINOM_VERSION}")
                 api("pw.binom.io:webdav:${pw.binom.Versions.BINOM_VERSION}")
+                api("pw.binom:klua:${pw.binom.Versions.KLUA_VERSION}")
                 api("org.jetbrains.kotlinx:kotlinx-serialization-core:${pw.binom.Versions.SERIALIZATION_VERSION}")
                 api("org.jetbrains.kotlinx:kotlinx-serialization-json:${pw.binom.Versions.SERIALIZATION_VERSION}")
             }

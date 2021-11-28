@@ -47,8 +47,15 @@ data class ProjectInfo(
     val dependencies: List<ProjectDependency> = emptyList(),
     val excludes: List<String> = emptyList(),
     val repositories: List<Repository2> = emptyList(),
+    val scripts: List<LuaScript> = emptyList(),
 
     val metas: List<Meta> = emptyList()
+)
+
+@Serializable
+data class LuaScript(
+    val file: String? = null,
+    val script: String? = null,
 )
 
 @Serializable

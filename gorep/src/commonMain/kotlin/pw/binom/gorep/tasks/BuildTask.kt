@@ -10,20 +10,22 @@ import pw.binom.io.file.*
 import pw.binom.io.use
 import pw.binom.logger.Logger
 
-class BuildTask(val context: Context, val project: Project) : Task {
+class BuildTask(val context: Context, val project: Project) : AbstractTask() {
+    companion object {
+        val CLASS = "build"
+    }
 
-    override val description: String?
-        get() = "Builds tar.gz file with addon"
+    override var description: String? = "Builds tar.gz file with addon"
 
-    private fun findConfigTask() = context.tasks.asSequence().mapNotNull {
-        if (it !is ConfigTask) {
-            return@mapNotNull null
-        }
-        if (it.project != project) {
-            return@mapNotNull null
-        }
-        it
-    }.firstOrNull()
+//    private fun findConfigTask() = context.tasks.asSequence().mapNotNull {
+//        if (it !is ConfigTask) {
+//            return@mapNotNull null
+//        }
+//        if (it.project != project) {
+//            return@mapNotNull null
+//        }
+//        it
+//    }.firstOrNull()
 
     private val logger = Logger.getLogger("BuildTask")
     val targetArchive = project.makeBuildDir().relative(ARCHIVE_FILE)
@@ -31,8 +33,10 @@ class BuildTask(val context: Context, val project: Project) : Task {
     //    val targetArchiveTar = project.makeBuildDir().relative("target.tar")
     override val name: String
         get() = "build"
+    override val clazz: String
+        get() = CLASS
 
-    override fun getDependencies(): List<Task> = listOf(findConfigTask() ?: TODO())
+//    override fun getDependencies(): List<Task> = listOf(findConfigTask() ?: TODO())
 
     private fun filter(file: File): Boolean {
         if (project.info.excludes.isNotEmpty()) {
@@ -73,7 +77,7 @@ class BuildTask(val context: Context, val project: Project) : Task {
         targetArchive.parent!!.mkdirs()
         targetArchive.delete()
         val addonRoot = project.addonsDir.relative(project.name)
-        if (!addonRoot.isDirectory){
+        if (!addonRoot.isDirectory) {
             throw FileNotFoundException("Addon dir \"$addonRoot\" not found")
         }
         TarWriter(GZIPOutput(targetArchive.parent!!.relative(targetArchive.name).openWrite(), level = 9)).use { tar ->

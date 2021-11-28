@@ -14,6 +14,6 @@ class UpdateTask(context: Context, project: Project) : AbstractGodotCheckTask(co
 
     override val name: String
         get() = "update"
-
-    override fun getDependencies(): List<Task> = emptyList()
+    override val clazz: String
+        get() = "update"
 }
