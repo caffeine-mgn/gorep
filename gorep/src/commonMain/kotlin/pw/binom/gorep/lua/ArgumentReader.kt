@@ -1,15 +1,12 @@
 package pw.binom.gorep.lua
 
-import pw.binom.lua.InputVarargs
-import pw.binom.lua.LuaValue
-import pw.binom.lua.checkedTable
-import pw.binom.lua.isTable
+import pw.binom.lua.*
 
 interface ArgumentReader {
     fun get(name: String, index: Int): LuaValue
 
     companion object {
-        fun create(input: InputVarargs) =
+        fun create(input: List<LuaValue>) =
             when {
                 input.size == 0 -> NoArgArgumentReader
                 input.size == 1 && input[0].isTable -> NamedArgumentReader(input)
@@ -18,16 +15,16 @@ interface ArgumentReader {
     }
 }
 
-class NamedArgumentReader(input: InputVarargs) : ArgumentReader {
+class NamedArgumentReader(input: List<LuaValue>) : ArgumentReader {
     init {
         require(input.size == 1)
     }
 
     private val table = input[0].checkedTable()
-    override fun get(name: String, index: Int): LuaValue = table[LuaValue.of(name)]
+    override fun get(name: String, index: Int): LuaValue = table[name.lua]
 }
 
-class IndexedArgumentReader(val input: InputVarargs) : ArgumentReader {
+class IndexedArgumentReader(val input: List<LuaValue>) : ArgumentReader {
     override fun get(name: String, index: Int): LuaValue = input[index]
 }
 

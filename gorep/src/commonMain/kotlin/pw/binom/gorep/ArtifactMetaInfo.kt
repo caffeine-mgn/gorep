@@ -11,6 +11,7 @@ data class ArtifactMetaInfo(
     override val version: Version,
     val sha256: String,
     override val dependencies: List<Dependency> = emptyList(),
+    override val lua: String? = null,
 
     val metas: List<Meta> = emptyList()
 ) : DepUnit {

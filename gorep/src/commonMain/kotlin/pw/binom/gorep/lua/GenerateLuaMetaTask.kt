@@ -3,6 +3,7 @@ package pw.binom.gorep.lua
 import pw.binom.gorep.Context
 import pw.binom.gorep.Project
 import pw.binom.gorep.tasks.AbstractTask
+import pw.binom.io.file.mkdirs
 import pw.binom.io.file.relative
 import pw.binom.io.file.rewrite
 
@@ -17,11 +18,11 @@ class GenerateLuaMetaTask(val context: Context, val project: Project) : Abstract
     }
 
     override suspend fun run() {
-        val file = project.root.relative("gorep.lua")
+        val file = project.pluginDir.relative("gorep.lua")
+        project.pluginDir.mkdirs()
         if (file.isDirectory) {
             TODO("Can't create $file")
         }
-
         file.rewrite(GOREP_GLOBAL)
 
     }
@@ -34,22 +35,6 @@ private val GOREP_GLOBAL =
 ENV = {}
 
 ---
---- Path to project root folder
-project_root = ''
-
----
---- Project name
-project_name = ''
-
----
---- Project version
-project_version = ''
-
----
---- Project Author. Can be nil
-project_author = ''
-
----
 --- Os type
 os_type = ''
 
@@ -60,6 +45,10 @@ user_directory = ''
 ---
 --- Platform type
 platform_type = ''
+
+---
+--- Path to addons inside project
+addons_dir = ''
 
 ---
 --- Adds new task
@@ -111,4 +100,13 @@ function execute_process(path, args, env, work_directory, stdin, stderr, stdout)
 --- During task running always returns false
 ---@return Returns true of lua started from root apply. And returns false of lua started as a part of other lua plugin.
 function is_main() end
+
+---
+--- Returns current project info
+--- `addons_dir` - path to addons dir inside project
+--- `root_dir` - path to root of project
+--- `name` - name of project
+--- `version` - version of project
+--- `author` - Author of project. Can be nil
+function get_project_info() end
 """

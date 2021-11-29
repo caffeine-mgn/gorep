@@ -58,6 +58,8 @@ class Project private constructor(
         get() = info.version
     override val dependencies: Collection<Dep>
         get() = info.dependencies
+    override val lua: String?
+        get() = info.lua
 }
 
 val Project.addonsDir

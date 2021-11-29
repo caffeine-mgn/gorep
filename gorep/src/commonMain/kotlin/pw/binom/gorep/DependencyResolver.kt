@@ -57,6 +57,8 @@ class DepUnitW(val unit: DepUnit, var type: DepType) : DepUnit {
         get() = unit.version
     override val dependencies: Collection<Dep>
         get() = deps
+    override val lua: String?
+        get() = unit.lua
 
     fun flatAllDependencies(): List<Dep> {
         val parsed = HashSet<DepUnitW>()
@@ -147,6 +149,7 @@ interface DepUnit {
     val name: String
     val version: Version
     val dependencies: Collection<Dep>
+    val lua: String?
 }
 
 interface Dep {

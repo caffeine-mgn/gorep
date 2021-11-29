@@ -9,21 +9,18 @@ import pw.binom.io.file.relative
 
 object LuaPlugin : Plugin {
     override fun apply(project: Project, context: Context) {
+        val lua = project.info.lua ?: return
         context.addTask(GenerateLuaMetaTask(context = context, project = project))
-        project.info.scripts.forEach { script ->
-            var workDirectory = project.root
-            val scriptText = if (script.file != null) {
-                val scriptFile = project.root.relative(script.file)
-                workDirectory = scriptFile.parent ?: workDirectory
-                if (!scriptFile.isFile) {
-                    TODO("Lua file not found")
-                }
-                scriptFile.readText()
-            } else {
-                script.script ?: ""
-            }
-            val e = LuaContainer(project, context)
-            e.execute(script = scriptText, workDirectory = workDirectory, isMain = true)
+        var workDirectory = project.pluginDir
+
+        val scriptFile = project.pluginDir.relative(lua)
+        workDirectory = scriptFile.parent ?: workDirectory
+        if (!scriptFile.isFile) {
+            TODO("Lua file not found")
         }
+        val scriptText = scriptFile.readText()
+
+        val e = LuaContainer(project, context)
+        e.execute(script = scriptText, workDirectory = workDirectory, isMain = true)
     }
 }

@@ -2,10 +2,7 @@ package pw.binom.gorep.lua
 
 import pw.binom.*
 import pw.binom.collection.LinkedList
-import pw.binom.gorep.Context
-import pw.binom.gorep.ProcessRunner
-import pw.binom.gorep.Project
-import pw.binom.gorep.TaskSelector
+import pw.binom.gorep.*
 import pw.binom.gorep.tasks.LuaTask
 import pw.binom.io.file.*
 import pw.binom.lua.*
@@ -13,29 +10,21 @@ import kotlin.random.Random
 
 class LuaContainer(val project: Project, val context: Context) {
     private val engine = LuaEngine()
-    private val funcs = UserFunctionContainer()
+    private val funcs = ObjectContainer()
     private val workDirectory = LinkedList<File>()
     private val currentWorkDirectory
         get() = workDirectory.getLast()
     private var isMainFlag = false
 
     init {
-        val envTable = LuaValue.of(
+        engine["ENV"] = LuaValue.of(
             Environment.getEnvs()
                 .entries
-                .associate { LuaValue.of(it.key) to LuaValue.of(it.value) }
+                .associate { it.key.lua to it.value.lua }
         )
-
-
-        Environment.currentTimeMillis
-        engine.setGlobal("ENV", envTable)
-        engine.setGlobal("os_type", LuaValue.of(Environment.os.name))
-        engine.setGlobal("platform_type", LuaValue.of(Environment.platform.name))
-        engine.setGlobal("user_directory", LuaValue.of(Environment.userDirectory))
-        engine.setGlobal("project_root", LuaValue.of(project.root.path))
-        engine.setGlobal("project_name", LuaValue.of(project.name))
-        engine.setGlobal("project_version", LuaValue.of(project.version.toString()))
-        engine.setGlobal("project_author", project.info.author?.let { LuaValue.of(it) } ?: LuaValue.Nil)
+        engine["os_type"] = Environment.os.name.lua
+        engine["platform_type"] = Environment.platform.name.lua
+        engine["user_directory"] = Environment.userDirectory.lua
     }
 
     private val alreadyApplyedFile = HashSet<File>()
@@ -59,15 +48,53 @@ class LuaContainer(val project: Project, val context: Context) {
         applyFile(scriptFile)
     }
 
-    private val isMain = defineFunction("is_main") { input, output ->
-        output += LuaValue.of(isMainFlag)
+    private val addTaskInput = defineFunction("add_task_input") {
+        val args = ArgumentReader.create(it)
+        val task = args.get("task", 0).checkedString()
+        val file = args.get("file", 1).checkedString()
+        context.getTaskByName(task).inputFiles += File(file)
+        emptyList()
+    }
+
+    private val addTaskOutput = defineFunction("add_task_output") {
+        val args = ArgumentReader.create(it)
+        val task = args.get("task", 0).checkedString()
+        val file = args.get("file", 1).checkedString()
+        context.getTaskByName(task).outputFiles += File(file)
+        emptyList()
+    }
+
+    private val setTaskEnabled = defineFunction("set_task_enabled") {
+        val args = ArgumentReader.create(it)
+        val task = args.get("task", 0).checkedString()
+        val enabled = args.get("enabled", 1).checkedBoolean()
+        context.getTaskByName(task).enabled = enabled
+        emptyList()
+    }
+
+    private val isMain = defineFunction("is_main") {
+        listOf(isMainFlag.lua)
     }
 
     private fun applyPlugin(file: String) {
         throw LuaException("Plugin not supported")
     }
 
-    private val apply = defineFunction("apply") { input, output ->
+    private val getProjectInfo = defineFunction("get_project_info") {
+        listOf(
+            LuaValue.of(
+                mapOf(
+                    "addons_dir".lua to project.addonsDir.path.lua,
+                    "root_dir".lua to project.root.path.lua,
+                    "name".lua to project.name.lua,
+                    "version".lua to project.version.toString().lua,
+                    "author".lua to (project.info.author?.lua ?: LuaValue.Nil),
+                )
+            )
+        )
+    }
+
+    private val apply = defineFunction("apply") { input ->
         if (input.size != 1) {
             throw LuaException("Invalid arguments")
         }
@@ -75,20 +102,20 @@ class LuaContainer(val project: Project, val context: Context) {
         val localFile = File(str).takeIfFile() ?: currentWorkDirectory.relative(str).takeIfExist()
         if (localFile != null) {
             applyFile(localFile)
-            return@defineFunction
+            return@defineFunction emptyList()
         }
         if (":" in str) {
             applyPlugin(str)
-            return@defineFunction
+            return@defineFunction emptyList()
         }
         throw LuaException("Unknown module \"$str\"")
     }
 
     init {
-        engine.setGlobal("require", apply)
+        engine["require"] = apply
     }
 
-    private val addTask = defineFunction("add_task") { input, output ->
+    private val addTask = defineFunction("add_task") { input ->
         val args = ArgumentReader.create(input)
         val taskName = args.get("name", 0).checkedString()
         val functionName = args.get("func", 1).checkedString()
@@ -100,21 +127,23 @@ class LuaContainer(val project: Project, val context: Context) {
             clazz = taskClass,
         )
         context.addTask(task)
+        emptyList()
     }
 
-    private val setTaskDescription = defineFunction("set_task_description") { input, output ->
+    private val setTaskDescription = defineFunction("set_task_description") { input ->
         val args = ArgumentReader.create(input)
         val taskName = args.get("name", 0).checkedString()
         val description = args.get("description", 1).checkedString()
         context.getTaskByName(taskName).description = description
+        emptyList()
     }
 
-    private val taskExist = defineFunction("task_exist") { input, output ->
+    private val taskExist = defineFunction("task_exist") { input ->
         val taskName = ArgumentReader.create(input).get("name", 0).checkedString()
-        output += LuaValue.of(context.tasks.any { it.name == taskName })
+        listOf(context.tasks.any { it.name == taskName }.lua)
     }
 
-    private val executeProcess = defineFunction("execute_process") { input, output ->
+    private val executeProcess = defineFunction("execute_process") { input ->
         val args = ArgumentReader.create(input)
         val path = args.get("path", 0).checkedString()
         File(path).takeIfFile() ?: currentWorkDirectory.relative(path).takeIfFile()
@@ -152,27 +181,25 @@ class LuaContainer(val project: Project, val context: Context) {
             stdout = stdout,
             background = background,
         )
-        output += if (result == null) {
-            LuaValue.Nil
-        } else {
-            LuaValue.of(result)
-        }
+        listOf(result?.lua ?: LuaValue.Nil)
     }
 
-    private val addTaskDependencyByName = defineFunction("add_task_dependency_by_name") { input, output ->
+    private val addTaskDependencyByName = defineFunction("add_task_dependency_by_name") { input ->
         val args = ArgumentReader.create(input)
         val taskName = args.get("task", 0).checkedString()
         val dependencyName = args.get("dependency_name", 1).checkedString()
         val task = context.getTaskByName(taskName)
         task.taskSelector = task.taskSelector + TaskSelector.SelectedTask(context.getTaskByName(dependencyName))
+        emptyList()
     }
 
-    private val addTaskAllDependenciesByClass = defineFunction("add_task_dependencies_all_by_class") { input, output ->
+    private val addTaskAllDependenciesByClass = defineFunction("add_task_dependencies_all_by_class") { input ->
         val args = ArgumentReader.create(input)
         val taskName = args.get("task", 0).checkedString()
         val className = args.get("class", 1).checkedString()
         val task = context.getTaskByName(taskName)
         task.taskSelector = task.taskSelector + TaskSelector.CustomSelector { it.clazz == className }
+        emptyList()
     }
 
     fun execute(script: String, workDirectory: File, isMain: Boolean): List<LuaValue> {
@@ -190,9 +217,9 @@ class LuaContainer(val project: Project, val context: Context) {
     fun call(functionName: String, vararg args: LuaValue): List<LuaValue> =
         engine.call(functionName, *args)
 
-    private fun defineFunction(name: String, func: LuaFunction): LuaValue.Function {
-        val value = funcs.add(func)
-        engine.setGlobal(name, value)
+    private fun defineFunction(name: String, func: LuaFunction): LuaValue.FunctionValue {
+        val value = funcs.makeClosure(func)
+        engine[name] = value
         return value
     }
 }

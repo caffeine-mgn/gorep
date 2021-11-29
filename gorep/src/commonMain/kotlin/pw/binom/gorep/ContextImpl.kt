@@ -87,7 +87,7 @@ class ContextImpl private constructor(
         val linkedTask = _tasks.find { it.name == task.name }
         if (linkedTask != null) {
             if (linkedTask is LinkedTask) {
-                linkedTask.implement = task
+                linkedTask.resolve(task)
                 return linkedTask
             }
             throw IllegalArgumentException("Task \"${task.name}\" already exist")
