@@ -3,7 +3,7 @@ package pw.binom.gorep
 import kotlin.reflect.KClass
 
 sealed interface TaskSelector {
-    fun select(context: Context, project: Project): List<Task>
+    fun select(project: Project): List<Task>
     operator fun plus(task: Task): TaskSelector =
         this + SelectedTask(task)
 
@@ -19,13 +19,13 @@ sealed interface TaskSelector {
     }
 
     object NoTasks : TaskSelector {
-        override fun select(context: Context, project: Project): List<Task> = emptyList()
+        override fun select(project: Project): List<Task> = emptyList()
         override fun plus(selector: TaskSelector): TaskSelector = selector
     }
 
     class WithName(val name: String, val optional: Boolean) : TaskSelector {
-        override fun select(context: Context, project: Project): List<Task> {
-            val f = context.tasks.find { it.name == name }
+        override fun select(project: Project): List<Task> {
+            val f = project.tasks.find { it.name == name }
             if (f == null && optional) {
                 return emptyList()
             }
@@ -37,15 +37,15 @@ sealed interface TaskSelector {
     }
 
     class SelectedTask(val task: Task) : TaskSelector {
-        override fun select(context: Context, project: Project): List<Task> =
+        override fun select(project: Project): List<Task> =
             listOf(task)
     }
 
     class CustomSelector(val selector: (Task) -> Boolean) : TaskSelector {
-        override fun select(context: Context, project: Project): List<Task> = context.tasks.filter(selector)
+        override fun select(project: Project): List<Task> = project.tasks.filter(selector)
     }
     class WithType(val type:KClass<out Task>) : TaskSelector {
-        override fun select(context: Context, project: Project): List<Task> = context.tasks.filter{
+        override fun select(project: Project): List<Task> = project.tasks.filter{
             if (type.isInstance(it)) {
                 return@filter true
             }
@@ -58,8 +58,8 @@ sealed interface TaskSelector {
 
     class Composer : TaskSelector {
         val list = ArrayList<TaskSelector>()
-        override fun select(context: Context, project: Project): List<Task> =
-            list.flatMap { it.select(context, project) }
+        override fun select(project: Project): List<Task> =
+            list.flatMap { it.select(project) }
 
         override fun plus(selector: TaskSelector): TaskSelector {
             if (selector is Composer) {

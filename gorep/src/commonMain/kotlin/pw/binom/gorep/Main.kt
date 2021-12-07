@@ -9,8 +9,9 @@ import pw.binom.io.file.rewrite
 import kotlin.native.concurrent.SharedImmutable
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
-import kotlinx.coroutines.runBlocking
 import pw.binom.gorep.lua.LuaPlugin
+import pw.binom.lua.LuaEngine
+import pw.binom.lua.ObjectContainer
 
 fun printHelp() {
     println("Help:")
@@ -18,34 +19,25 @@ fun printHelp() {
 }
 
 @OptIn(ExperimentalTime::class)
-fun runInProject(args: List<String>, project: Project, properties: Map<String, String>, verbose: Boolean) {
+suspend fun runInProject(args: List<String>, rootProject: Project, context: ContextImpl) {
     val totalDuration = measureTime {
-        runBlocking {
-            val localCachePath =
-                    Environment.getEnv("GOREP_LOCAL_CACHE") ?: "${Environment.userDirectory}${File.SEPARATOR}/.gorep"
-            val localCacheFile =
-                    File(localCachePath).mkdirs()
-                            ?: throw RuntimeException("Can't create local cache by path \"$localCachePath\"")
-            val context = ContextImpl.create(
-                    project = project,
-                    localCache = LocalCache(localCacheFile),
-                    properties = properties,
-                    verbose = verbose,
-            )
-            context.status = ContextImpl.Status.TASKS_RESOLVE
+        runSuspendFunc {
 
-            BasePlugin.apply(project = project, context = context)
-            GodotPlugin.apply(project = project, context = context)
-            LuaPlugin.apply(project = project, context = context)
-            val tc = TaskController(context)
-            tc.resolve(project)
-            context.status = ContextImpl.Status.FINISH
+
+            context.status = Context.Status.TASKS_RESOLVE
+
+            RepositoryPlugin.apply(project = rootProject)
+            BasePlugin.apply(project = rootProject)
+            GodotPlugin.apply(project = rootProject)
+            LuaPlugin.apply(project = rootProject)
+            val taskRunner = TaskController.resolve(rootProject)
+            context.status = Context.Status.FINISH
 
             val taskForExecute = args.map {
-                context.tasks.find { e -> e.name == it }
-                        ?: throw RuntimeException("Can't find task \"$it\"")
+                rootProject.tasks.find { e -> e.name == it }
+                    ?: throw RuntimeException("Can't find task \"$it\"")
             }
-            tc.run(taskForExecute)
+            taskRunner.run(taskForExecute)
 
 //            val executed = HashSet<Task>()
 //
@@ -114,6 +106,13 @@ fun printVersion() {
 }
 
 fun main(args: Array<String>) {
+
+    val localCachePath =
+        Environment.getEnv("GOREP_LOCAL_CACHE") ?: "${Environment.userDirectory}${File.SEPARATOR}/.gorep"
+    val localCacheFile =
+        File(localCachePath).mkdirs()
+            ?: throw RuntimeException("Can't create local cache by path \"$localCachePath\"")
+    val localCache = LocalCache(localCacheFile)
     val argsList = args.toMutableList()
 
     if (argsList.size == 1 && "--version" in argsList) {
@@ -145,12 +144,19 @@ fun main(args: Array<String>) {
         }
         false
     }
+    val context = ContextImpl.create(
+        properties = properties,
+        verbose = verbose,
+        localCache = localCache,
+    )
 
-    val project = Project.open(File(Environment.workDirectory))
-    if (project != null) {
-        runInProject(args = argsList, project = project, properties = properties, verbose = verbose)
-    } else {
-        runWithoutProject(args = argsList, properties = properties, verbose = verbose)
+    runSuspendFunc {
+        val project = Project.open(context = context, root = File(Environment.workDirectory))
+        if (project != null) {
+            runInProject(args = argsList, rootProject = project, context = context)
+        } else {
+            runWithoutProject(args = argsList, properties = properties, verbose = verbose)
+        }
     }
 }
 
@@ -183,10 +189,10 @@ class InitTask(val directory: File) : Task2 {
 
     override fun execute() {
         val info = ProjectInfo(
-                name = "init",
-                title = "StartUp",
-                version = Version("0.0.1"),
-                dependencies = emptyList(),
+            name = "init",
+            title = "StartUp",
+            version = Version("0.0.1"),
+            dependencies = emptyList(),
         )
         val json = prettyJson.encodeToString(ProjectInfo.serializer(), info)
         directory.relative(PROJECT_FILE).rewrite(json)

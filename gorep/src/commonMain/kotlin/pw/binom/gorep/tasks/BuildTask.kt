@@ -10,22 +10,13 @@ import pw.binom.io.file.*
 import pw.binom.io.use
 import pw.binom.logger.Logger
 
-class BuildTask(val context: Context, val project: Project) : AbstractTask() {
+class BuildTask(val project: Project) : AbstractTask() {
     companion object {
         val CLASS = "build"
     }
 
     override var description: String? = "Builds tar.gz file with addon"
 
-//    private fun findConfigTask() = context.tasks.asSequence().mapNotNull {
-//        if (it !is ConfigTask) {
-//            return@mapNotNull null
-//        }
-//        if (it.project != project) {
-//            return@mapNotNull null
-//        }
-//        it
-//    }.firstOrNull()
 
     private val logger = Logger.getLogger("BuildTask")
     val targetArchive = project.makeBuildDir().relative(ARCHIVE_FILE)
@@ -69,7 +60,7 @@ class BuildTask(val context: Context, val project: Project) : AbstractTask() {
         return true
     }
 
-    override suspend fun run() {
+    override suspend fun execute() {
         val startupScriptFile = project.pluginDir.relative(project.info.script)
         if (!startupScriptFile.isFile) {
             TODO("Can't find start plugin file \"$startupScriptFile\"")

@@ -165,3 +165,10 @@ enum class DepType(val order: Int) {
     fun getUpper(depType: DepType) =
         if (this.order < depType.order) depType else this
 }
+
+suspend fun DepUnit.resolveDependencies(depProvider: DepProvider,forceUpdate: Boolean)=
+    DependencyResolver.resolve(
+        depUnit = this,
+        depProvider = depProvider,
+        forceUpdate = forceUpdate,
+    )

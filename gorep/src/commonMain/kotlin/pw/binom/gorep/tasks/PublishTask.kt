@@ -14,7 +14,7 @@ import pw.binom.io.use
 import pw.binom.nextUuid
 import kotlin.random.Random
 
-class PublishTask(val context: Context, val project: Project, val repository: Repository) : AbstractTask() {
+class PublishTask(val project: Project, val repository: Repository) : AbstractTask() {
     companion object {
         val CLASS = "publish"
     }
@@ -25,7 +25,7 @@ class PublishTask(val context: Context, val project: Project, val repository: Re
 
     override var description: String? = "Publishing to ${repository.name} repository"
 
-    private fun findBuildTask() = context.tasks.asSequence().mapNotNull {
+    private fun findBuildTask() = project.tasks.asSequence().mapNotNull {
         if (it !is BuildTask) {
             return@mapNotNull null
         }
@@ -40,7 +40,7 @@ class PublishTask(val context: Context, val project: Project, val repository: Re
 //        return listOf(buildTask)
 //    }
 
-    override suspend fun run() {
+    override suspend fun execute() {
         val buildTask = findBuildTask() ?: TODO()
         if (!buildTask.targetArchive.isFile) {
             TODO("${buildTask.targetArchive} not exist")

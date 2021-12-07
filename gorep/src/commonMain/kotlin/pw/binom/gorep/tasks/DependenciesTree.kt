@@ -2,7 +2,7 @@ package pw.binom.gorep.tasks
 
 import pw.binom.gorep.*
 
-class DependenciesTree(val context: Context, val project: Project) : AbstractTask() {
+class DependenciesTree(val project: Project) : AbstractTask() {
     override val name: String
         get() = "dependencies"
     override val clazz: String
@@ -10,8 +10,8 @@ class DependenciesTree(val context: Context, val project: Project) : AbstractTas
 
     override var description: String? = "Prints dependencies tree"
 
-    override suspend fun run() {
-        val dependencies = project.resolveDependencies(context.repositoryService, forceUpdate = false)
+    override suspend fun execute() {
+        val dependencies = project.resolveDependencies(project.repositoryService, forceUpdate = false)
         printTree(dependencies)
     }
 

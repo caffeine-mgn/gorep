@@ -7,17 +7,15 @@ import pw.binom.io.file.mkdirs
 import pw.binom.io.file.relative
 import pw.binom.io.file.rewrite
 
-class GenerateLuaMetaTask(val context: Context, val project: Project) : AbstractTask() {
-    override val name: String
-        get() = "gorep_global_lua"
-    override val clazz: String
-        get() = "info"
+class GenerateLuaMetaTask(val project: Project) : AbstractTask() {
+    override val name: String = "gorep_global_lua"
+    override val clazz: String = "info"
 
     init {
         description = "Generates gorep.lua with gorep global lua field and functions"
     }
 
-    override suspend fun run() {
+    override suspend fun execute() {
         val file = project.pluginDir.relative("gorep.lua")
         project.pluginDir.mkdirs()
         if (file.isDirectory) {

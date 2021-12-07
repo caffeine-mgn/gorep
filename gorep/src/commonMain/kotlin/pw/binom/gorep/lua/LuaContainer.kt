@@ -2,19 +2,26 @@ package pw.binom.gorep.lua
 
 import pw.binom.*
 import pw.binom.collection.LinkedList
-import pw.binom.gorep.*
-import pw.binom.gorep.tasks.LuaTask
+import pw.binom.gorep.ProcessRunner
+import pw.binom.gorep.Project
+import pw.binom.gorep.TaskSelector
+import pw.binom.gorep.addonsDir
 import pw.binom.io.file.*
 import pw.binom.lua.*
-import kotlin.random.Random
 
-class LuaContainer(val project: Project, val context: Context) {
+class LuaContainer(val project: Project) {
     private val engine = LuaEngine()
     private val funcs = ObjectContainer()
     private val workDirectory = LinkedList<File>()
     private val currentWorkDirectory
         get() = workDirectory.getLast()
     private var isMainFlag = false
+    private val definer = Definer(engine, funcs)
+    private val gcMetatable = engine.makeRef(
+        LuaValue.TableValue().also {
+            it["__gc".lua] = engine.userdataAutoGcFunction
+        }
+    )
 
     init {
         engine["ENV"] = LuaValue.of(
@@ -25,6 +32,22 @@ class LuaContainer(val project: Project, val context: Context) {
         engine["os_type"] = Environment.os.name.lua
         engine["platform_type"] = Environment.platform.name.lua
         engine["user_directory"] = Environment.userDirectory.lua
+        val gorepTable = LuaValue.TableValue()
+        LuaProjectWrapper.apply(
+            parentTable = gorepTable,
+            project = project,
+            engine = engine,
+            o = funcs,
+            gcMetatable = gcMetatable
+        )
+        LuaTaskWrapper.apply(
+            parentTable = gorepTable,
+            project = project,
+            engine = engine,
+            o = funcs,
+            gcMetatable = gcMetatable
+        )
+        engine["gorep"] = gorepTable
     }
 
     private val alreadyApplyedFile = HashSet<File>()
@@ -48,27 +71,11 @@ class LuaContainer(val project: Project, val context: Context) {
         applyFile(scriptFile)
     }
 
-    private val addTaskInput = defineFunction("add_task_input") {
-        val args = ArgumentReader.create(it)
-        val task = args.get("task", 0).checkedString()
-        val file = args.get("file", 1).checkedString()
-        context.getTaskByName(task).inputFiles += File(file)
-        emptyList()
-    }
-
-    private val addTaskOutput = defineFunction("add_task_output") {
-        val args = ArgumentReader.create(it)
-        val task = args.get("task", 0).checkedString()
-        val file = args.get("file", 1).checkedString()
-        context.getTaskByName(task).outputFiles += File(file)
-        emptyList()
-    }
-
     private val setTaskEnabled = defineFunction("set_task_enabled") {
         val args = ArgumentReader.create(it)
         val task = args.get("task", 0).checkedString()
         val enabled = args.get("enabled", 1).checkedBoolean()
-        context.getTaskByName(task).enabled = enabled
+        project.getTaskByName(task).enabled = enabled
         emptyList()
     }
 
@@ -115,32 +122,17 @@ class LuaContainer(val project: Project, val context: Context) {
         engine["require"] = apply
     }
 
-    private val addTask = defineFunction("add_task") { input ->
-        val args = ArgumentReader.create(input)
-        val taskName = args.get("name", 0).checkedString()
-        val functionName = args.get("func", 1).checkedString()
-        val taskClass: String = args.get("class", 2).stringOrNull() ?: "lua_task_${Random.nextUuid().toShortString()}"
-        val task = LuaTask(
-            luaContainer = this,
-            functionName = functionName,
-            name = taskName,
-            clazz = taskClass,
-        )
-        context.addTask(task)
-        emptyList()
-    }
-
     private val setTaskDescription = defineFunction("set_task_description") { input ->
         val args = ArgumentReader.create(input)
         val taskName = args.get("name", 0).checkedString()
         val description = args.get("description", 1).checkedString()
-        context.getTaskByName(taskName).description = description
+        project.getTaskByName(taskName).description = description
         emptyList()
     }
 
     private val taskExist = defineFunction("task_exist") { input ->
         val taskName = ArgumentReader.create(input).get("name", 0).checkedString()
-        listOf(context.tasks.any { it.name == taskName }.lua)
+        listOf(project.tasks.any { it.name == taskName }.lua)
     }
 
     private val executeProcess = defineFunction("execute_process") { input ->
@@ -188,8 +180,8 @@ class LuaContainer(val project: Project, val context: Context) {
         val args = ArgumentReader.create(input)
         val taskName = args.get("task", 0).checkedString()
         val dependencyName = args.get("dependency_name", 1).checkedString()
-        val task = context.getTaskByName(taskName)
-        task.taskSelector = task.taskSelector + TaskSelector.SelectedTask(context.getTaskByName(dependencyName))
+        val task = project.getTaskByName(taskName)
+        task.taskSelector = task.taskSelector + TaskSelector.SelectedTask(project.getTaskByName(dependencyName))
         emptyList()
     }
 
@@ -197,7 +189,7 @@ class LuaContainer(val project: Project, val context: Context) {
         val args = ArgumentReader.create(input)
         val taskName = args.get("task", 0).checkedString()
         val className = args.get("class", 1).checkedString()
-        val task = context.getTaskByName(taskName)
+        val task = project.getTaskByName(taskName)
         task.taskSelector = task.taskSelector + TaskSelector.CustomSelector { it.clazz == className }
         emptyList()
     }
@@ -214,11 +206,11 @@ class LuaContainer(val project: Project, val context: Context) {
         }
     }
 
-    fun call(functionName: String, vararg args: LuaValue): List<LuaValue> =
+    fun call(functionName: LuaValue, vararg args: LuaValue): List<LuaValue> =
         engine.call(functionName, *args)
 
-    private fun defineFunction(name: String, func: LuaFunction): LuaValue.FunctionValue {
-        val value = funcs.makeClosure(func)
+    private fun defineFunction(name: String, func: LuaFunction): LuaValue {
+        val value = engine.createACClosure(func)
         engine[name] = value
         return value
     }

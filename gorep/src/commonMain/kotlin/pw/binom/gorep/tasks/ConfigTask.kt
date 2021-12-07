@@ -22,7 +22,7 @@ class ConfigTask(val project: Project) : AbstractTask() {
 
 //    override fun getDependencies(): List<Task> = emptyList()
 
-    override suspend fun run() {
+    override suspend fun execute() {
 
         pluginCfgDir.parent!!.mkdirs()
         pluginCfgDir.openWrite().use {

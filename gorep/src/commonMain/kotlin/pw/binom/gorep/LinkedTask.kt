@@ -90,4 +90,12 @@ class LinkedTask(override val name: String) : Task {
         val task = implement ?: throw IllegalStateException("Task not resolved")
         task.run()
     }
+
+    override fun doFirst(func: suspend () -> Unit) {
+        TODO("Not yet implemented")
+    }
+
+    override fun doLast(func: suspend () -> Unit) {
+        TODO("Not yet implemented")
+    }
 }

@@ -9,93 +9,28 @@ import pw.binom.network.Network
 import pw.binom.network.NetworkCoroutineDispatcher
 
 class ContextImpl private constructor(
-    val networkDispatcher: NetworkCoroutineDispatcher,
-    val project: Project,
-    val localCache: LocalCache,
-    val repositories: HashMap<Repository2, Repository>,
-    override val variableReplacer: VariableReplacer,
     override val verbose: Boolean,
-) :
-    Context {
+    override val properties: Map<String, String>, override val localCache: LocalCache,
+) : Context {
 
     companion object {
-        suspend fun create(
-            networkDispatcher: NetworkCoroutineDispatcher = Dispatchers.Network,
-            project: Project,
-            localCache: LocalCache,
+        fun create(
             properties: Map<String, String>,
             verbose: Boolean,
+            localCache: LocalCache,
         ): ContextImpl {
-            val variableReplacer = StandardVariableReplacer(properties = properties)
-            val repositories = HashMap<Repository2, Repository>()
-            project.info.repositories.forEach {
-                val repo = when (it.type) {
-                    RepositoryType.LOCAL -> FileSystemRepository(name = it.name, root = File(it.path))
-                    RepositoryType.WEBDAV -> WebdavRepository.create(
-                        networkDispatcher = networkDispatcher,
-                        name = it.name,
-                        uri = it.path,
-                        auth = it.basicAuth,
-                        variableReplacer = variableReplacer,
-                        verbose = verbose,
-                    )
-                }
-                repositories[it] = repo
-            }
+//            val variableReplacer = StandardVariableReplacer(properties = properties)
             return ContextImpl(
-                networkDispatcher = networkDispatcher,
-                project = project,
                 localCache = localCache,
-                repositories = repositories,
-                variableReplacer = variableReplacer,
                 verbose = verbose,
+                properties = properties,
             )
         }
     }
 
-    var status = Status.NEW
 
-    enum class Status {
-        NEW,
-        TASKS_RESOLVE,
-        FINISH
-    }
-
-    private val _tasks = ArrayList<Task>()
-    override fun getTaskByName(name: String): Task {
-        val found = _tasks.find { it.name == name }
-        if (found != null) {
-            return found
-        }
-        val linkedTask = LinkedTask(name = name)
-        _tasks += linkedTask
-        return linkedTask
-    }
-
-    override val tasks: List<Task>
-        get() = _tasks
-    override val repositoryService: RepositoryService =
-        RepositoryService(repositories = repositories.values, localCache = localCache)
-
-    override fun addTask(task: Task): Task {
-        if (task is LinkedTask) {
-            throw IllegalStateException("Can't add linked task via external api")
-        }
-        if (status != Status.TASKS_RESOLVE) {
-            throw IllegalStateException()
-        }
-        val linkedTask = _tasks.find { it.name == task.name }
-        if (linkedTask != null) {
-            if (linkedTask is LinkedTask) {
-                linkedTask.resolve(task)
-                return linkedTask
-            }
-            throw IllegalArgumentException("Task \"${task.name}\" already exist")
-        }
-        _tasks += task
-        return task
-    }
-
-    override fun findTasks(selector: TaskSelector): List<Task> =
-        selector.select(this, project)
+    override var status: Context.Status = Context.Status.NEW
 }
+
+//override val repositoryService: RepositoryService =
+//    RepositoryService(repositories = repositories.values, localCache = localCache)

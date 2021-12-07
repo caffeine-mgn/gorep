@@ -6,7 +6,7 @@ import pw.binom.gorep.Task
 import pw.binom.gorep.Version
 
 
-class UpdateTask(context: Context, project: Project) : AbstractGodotCheckTask(context = context, project = project) {
+class UpdateTask(project: Project) : AbstractGodotCheckTask(project = project) {
 
     override fun check(name: String, version: Version) {
         check(name = name, version = version, updateCache = true)

@@ -3,26 +3,26 @@ package pw.binom.gorep
 import pw.binom.gorep.tasks.*
 
 object GodotPlugin : Plugin {
-    override fun apply(project: Project, context: Context) {
-        context.addTask(BuildTask(project = project, context = context)).also {
-            it.taskSelector += it.taskSelector + context.getTaskByName(ConfigTask.BASE_NAME)
+    override suspend fun apply(project: Project) {
+        project.addTask(BuildTask(project = project)).also {
+            it.taskSelector += it.taskSelector + project.getTaskByName(ConfigTask.BASE_NAME)
         }
-        context.addTask(ConfigTask(project = project))
-        context.addTask(CheckTask(project = project, context = context, name = "check", force = false))
-        context.addTask(CheckTask(project = project, context = context, name = "check_update", force = true))
-        context.addTask(UpdateTask(project = project, context = context))
+        project.addTask(ConfigTask(project = project))
+        project.addTask(CheckTask(project = project, name = "check", force = false))
+        project.addTask(CheckTask(project = project, name = "check_update", force = true))
+        project.addTask(UpdateTask(project = project))
         var publishTaskExist = false
-        context.repositoryService.repositories.forEach { repo ->
+        project.repositories.forEach { repo ->
             if (project.info.repositories.find { it.name == repo.name }?.publish != true) {
                 return@forEach
             }
             publishTaskExist = true
-            context.addTask(PublishTask(context = context, project = project, repository = repo)).also {
+            project.addTask(PublishTask(project = project, repository = repo)).also {
                 it.taskSelector = it.taskSelector + TaskSelector.WithType(BuildTask::class)
             }
         }
         if (publishTaskExist) {
-            context.addTask(PublishAllTask(context)).also {
+            project.addTask(PublishAllTask()).also {
                 it.taskSelector = it.taskSelector + TaskSelector.WithType(PublishTask::class)
             }
         }

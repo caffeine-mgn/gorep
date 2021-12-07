@@ -10,7 +10,7 @@ class GDScriptTask(
     override val clazz: String
         get() = "gdscript_task"
 
-    override suspend fun run() {
+    override suspend fun execute() {
         TODO("Not yet implemented")
     }
 }

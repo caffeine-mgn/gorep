@@ -1,9 +1,10 @@
 package pw.binom.gorep.tasks
 
 import pw.binom.gorep.Context
+import pw.binom.gorep.Project
 import pw.binom.gorep.Task
 
-class TasksTask(val context: Context) : AbstractTask() {
+class TasksTask(val project: Project) : AbstractTask() {
     override val name: String
         get() = "tasks"
     override val clazz: String
@@ -11,13 +12,13 @@ class TasksTask(val context: Context) : AbstractTask() {
 
     override var description: String? = "Prints Tasks list"
 
-    override suspend fun run() {
+    override suspend fun execute() {
         println("Tasks:")
-        val maxNameSize = context.tasks.maxOfOrNull {
+        val maxNameSize = project.tasks.maxOfOrNull {
             it.name.length
         } ?: 0
 
-        context.tasks.forEach {
+        project.tasks.forEach {
             print(" ")
             print(it.name)
             if (it.description != null) {

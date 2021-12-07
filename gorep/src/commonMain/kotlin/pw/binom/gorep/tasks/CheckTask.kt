@@ -11,13 +11,13 @@ import pw.binom.logger.info
 import pw.binom.logger.warn
 
 
-class CheckTask(val context: Context, val project: Project, val force: Boolean, override val name: String) :
+class CheckTask(val project: Project, val force: Boolean, override val name: String) :
     AbstractTask() {
 
     private val logger = Logger.getLogger(name)
 
     private suspend fun install(dep: Dep) {
-        context.repositoryService.localCache.install(
+        project.context.localCache.install(
             destination = project.addonsDir,
             name = dep.name,
             version = dep.version,
@@ -45,7 +45,7 @@ class CheckTask(val context: Context, val project: Project, val force: Boolean, 
             install(dep)
             return
         }
-        val depInfo = context.repositoryService.localCache.find(name = dep.name, version = dep.version)
+        val depInfo = project.context.localCache.find(name = dep.name, version = dep.version)
             ?: throw RuntimeException("Dependency ${dep.name}:${dep.version} lost")
 
         if (info.sha != depInfo.sha256) {
@@ -77,14 +77,14 @@ class CheckTask(val context: Context, val project: Project, val force: Boolean, 
     override val clazz: String
         get() = "config"
 
-    override suspend fun run() {
+    override suspend fun execute() {
         val gitignoreInAddons = project.addonsDir.relative(".gitignore")
         if (!gitignoreInAddons.isFile && !gitignoreInAddons.isExist) {
             gitignoreInAddons.openWrite().bufferedAsciiWriter().use {
                 it.append("*.dependency.json")
             }
         }
-        val list = project.resolveDependencies(context.repositoryService, forceUpdate = force).flatAllDependencies()
+        val list = project.resolveDependencies(project.repositoryService, forceUpdate = force).flatAllDependencies()
         list.forEach {
             checkDep(it)
         }

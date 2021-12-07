@@ -1,11 +1,14 @@
 package pw.binom.gorep
 
 interface Context {
-    fun getTaskByName(name:String):Task
-    val tasks: List<Task>
-    val repositoryService: RepositoryService
-    val variableReplacer: VariableReplacer
+    val properties: Map<String, String>
     val verbose: Boolean
-    fun addTask(task: Task):Task
-    fun findTasks(selector: TaskSelector):List<Task>
+    val status: Status
+    val localCache:LocalCache
+
+    enum class Status {
+        NEW,
+        TASKS_RESOLVE,
+        FINISH
+    }
 }

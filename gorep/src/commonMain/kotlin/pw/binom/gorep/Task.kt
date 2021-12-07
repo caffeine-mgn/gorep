@@ -1,6 +1,7 @@
 package pw.binom.gorep
 
 import pw.binom.io.file.File
+import pw.binom.lua.LuaValue
 
 interface Task {
     var description: String?
@@ -13,4 +14,6 @@ interface Task {
     var runOnSource: Boolean
     fun define(context: Context) {}
     suspend fun run()
+    fun doFirst(func: suspend () -> Unit)
+    fun doLast(func: suspend () -> Unit)
 }

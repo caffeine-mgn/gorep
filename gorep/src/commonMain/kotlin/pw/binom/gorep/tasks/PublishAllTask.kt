@@ -3,7 +3,7 @@ package pw.binom.gorep.tasks
 import pw.binom.gorep.Context
 import pw.binom.gorep.Task
 
-class PublishAllTask(val context: Context) : AbstractTask() {
+class PublishAllTask() : AbstractTask() {
     override val name: String
         get() = "publish"
     override val clazz: String
@@ -11,7 +11,7 @@ class PublishAllTask(val context: Context) : AbstractTask() {
 
     override var description: String? = "Publishing to all repositories"
 
-    override suspend fun run() {
+    override suspend fun execute() {
 
     }
 }
