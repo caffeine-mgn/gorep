@@ -93,6 +93,6 @@ val Project.addonsDir
 
 fun Project.makeAddonsDir() = root.relative(ADDONS_DIR).mkdirs()!!
 val Project.buildDir
-    get() = root.relative(BUILD_DIR_NAME).takeIfDirection()
+    get() = root.relative(BUILD_DIR_NAME)
 
 fun Project.makeBuildDir() = root.relative(BUILD_DIR_NAME).mkdirs()!!

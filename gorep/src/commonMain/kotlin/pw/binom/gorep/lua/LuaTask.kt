@@ -153,6 +153,20 @@ class LuaProjectWrapper(
             parentTable["get_project_name".lua] = o.makeClosure { args ->
                 listOf(args[1].checkedData().value<LuaProjectWrapper>().project.name.lua)
             }
+
+            parentTable["get_project_task_by_name".lua] = o.makeClosure { args ->
+                val args = ArgumentReader.create(args, true)
+                val project = args.get("project", 0).checkedData().value<LuaProjectWrapper>().project
+                val name = args.get("name", 1).checkedString()
+                val task = project.getTaskByName(name)
+                listOf(
+                    LuaTaskWrapper.wrap(
+                        task = task,
+                        engine = engine,
+                        gcMetatable = gcMetatable
+                    )
+                )
+            }
         }
     }
 }

@@ -30,6 +30,9 @@ class LinkedTask(override val name: String) : Task {
             task.outputFiles += overrideOutputFiles
             overrideOutputFiles.clear()
         }
+
+        doFirst.forEach { task.doFirst(it) }
+        doLast.forEach { task.doLast(it) }
     }
 
     private var overrideDescription: String? = null
@@ -91,11 +94,13 @@ class LinkedTask(override val name: String) : Task {
         task.run()
     }
 
+    private var doFirst = ArrayList<suspend () -> Unit>()
+    private var doLast = ArrayList<suspend () -> Unit>()
     override fun doFirst(func: suspend () -> Unit) {
-        TODO("Not yet implemented")
+        doFirst += func
     }
 
     override fun doLast(func: suspend () -> Unit) {
-        TODO("Not yet implemented")
+        doLast += func
     }
 }

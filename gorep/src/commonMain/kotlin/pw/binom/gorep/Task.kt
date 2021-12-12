@@ -12,7 +12,6 @@ interface Task {
     val clazz: String
     var enabled: Boolean
     var runOnSource: Boolean
-    fun define(context: Context) {}
     suspend fun run()
     fun doFirst(func: suspend () -> Unit)
     fun doLast(func: suspend () -> Unit)

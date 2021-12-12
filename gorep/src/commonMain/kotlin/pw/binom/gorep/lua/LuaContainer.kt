@@ -2,10 +2,7 @@ package pw.binom.gorep.lua
 
 import pw.binom.*
 import pw.binom.collection.LinkedList
-import pw.binom.gorep.ProcessRunner
-import pw.binom.gorep.Project
-import pw.binom.gorep.TaskSelector
-import pw.binom.gorep.addonsDir
+import pw.binom.gorep.*
 import pw.binom.io.file.*
 import pw.binom.lua.*
 
@@ -48,7 +45,37 @@ class LuaContainer(val project: Project) {
             gcMetatable = gcMetatable
         )
         engine["gorep"] = gorepTable
+
+        engine["os"].checkedTable()["name".lua] = funcs.makeClosure { args ->
+            listOf(Environment.os.name.lua)
+        }
+
+        engine["os"].checkedTable()["executable_extension".lua] = funcs.makeClosure { args ->
+            listOf(EXE_SUFIX.lua)
+        }
+
+        engine["os"].checkedTable()["build_directory".lua] = funcs.makeClosure { args ->
+            listOf(project.buildDir.path.lua)
+        }
+
+        engine["os"].checkedTable()["find_program".lua] = funcs.makeClosure { args ->
+            val programName = args[0].checkedString()
+            val path = Environment.getEnv("PATH")
+                ?.split(PATH_SEPARATOR)
+                ?.asSequence()
+                ?.map { File(it).relative(programName) }
+                ?.filter { it.isFile }
+                ?.firstOrNull()
+            if (path != null) {
+                listOf(path.path.lua)
+            } else {
+                emptyList()
+            }
+        }
     }
+
+    private val PATH_SEPARATOR = if (Environment.os == OS.WINDOWS) ';' else ':'
+    private val EXE_SUFIX = if (Environment.os == OS.WINDOWS) ".exe" else ""
 
     private val alreadyApplyedFile = HashSet<File>()
 
@@ -120,14 +147,6 @@ class LuaContainer(val project: Project) {
 
     init {
         engine["require"] = apply
-    }
-
-    private val setTaskDescription = defineFunction("set_task_description") { input ->
-        val args = ArgumentReader.create(input)
-        val taskName = args.get("name", 0).checkedString()
-        val description = args.get("description", 1).checkedString()
-        project.getTaskByName(taskName).description = description
-        emptyList()
     }
 
     private val taskExist = defineFunction("task_exist") { input ->
